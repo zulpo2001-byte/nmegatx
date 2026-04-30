@@ -18,8 +18,10 @@ git checkout "${BRANCH}"
 echo "[3/6] Pull latest commits..."
 git pull --ff-only origin "${BRANCH}"
 
-echo "[4/6] Build and start containers..."
-docker compose -f docker-compose.prod.yml up -d --build
+echo "[4/6] Rebuild images from source (no cache) and start containers..."
+# 强制每次重新部署都重新编译，避免复用旧层/旧二进制
+docker compose -f docker-compose.prod.yml build --no-cache app worker
+docker compose -f docker-compose.prod.yml up -d --force-recreate app worker redis postgres
 
 echo "[5/6] Run migrations..."
 docker compose -f docker-compose.prod.yml exec -T app ./migrate
