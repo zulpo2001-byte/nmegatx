@@ -475,6 +475,27 @@ func (s *GatewayService) CompleteByPayToken(token string, reportAmount float64, 
 	}
 	now := time.Now()
 	updates := map[string]any{"status": "completed", "paid_at": &now}
+
+	// 通道收费：按用户配置的通道费率在完成时扣费（USD）
+	var user model.User
+	feeRate := 0.0
+	feeAmount := 0.0
+	if err := s.DB.Select("id", "paypal_fee_rate", "stripe_fee_rate", "balance_usd").First(&user, order.UserID).Error; err == nil {
+		if order.PaymentMethod == "paypal" {
+			feeRate = user.PaypalFeeRate
+		} else if order.PaymentMethod == "stripe" {
+			feeRate = user.StripeFeeRate
+		}
+		if feeRate < 0 {
+			feeRate = 0
+		}
+		feeAmount = order.Amount * feeRate / 100.0
+		if feeAmount < 0 {
+			feeAmount = 0
+		}
+		updates["channel_fee_rate"] = feeRate
+		updates["channel_fee"] = feeAmount
+	}
 	if bOrderID != "" {
 		updates["b_order_id"] = bOrderID
 	}
@@ -484,8 +505,14 @@ func (s *GatewayService) CompleteByPayToken(token string, reportAmount float64, 
 	if err := s.DB.Model(&order).Updates(updates).Error; err != nil {
 		return nil, err
 	}
+	if feeAmount > 0 {
+		_ = s.DB.Model(&model.User{}).Where("id = ?", order.UserID).
+			Update("balance_usd", gorm.Expr("COALESCE(balance_usd,0) - ?", feeAmount)).Error
+	}
 	order.Status = "completed"
 	order.PaidAt = &now
+	order.ChannelFeeRate = feeRate
+	order.ChannelFee = feeAmount
 
 	if s.Queue != nil {
 		if t, e := task.NewCallbackTask(order.ID, "completed"); e == nil {

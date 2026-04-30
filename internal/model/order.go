@@ -27,6 +27,8 @@ type Order struct {
 	PaidAt          *time.Time `                                                               json:"paid_at"`
 	AbandonedAt     *time.Time `                                                               json:"abandoned_at"`
 	CallbackState   string     `gorm:"size:32;index"                                           json:"callback_state"`
+	ChannelFeeRate  float64    `gorm:"default:0"                                               json:"channel_fee_rate"`
+	ChannelFee      float64    `gorm:"default:0"                                               json:"channel_fee"`
 	CreatedAt       time.Time  `                                                               json:"created_at"`
 	UpdatedAt       time.Time  `                                                               json:"updated_at"`
 }
