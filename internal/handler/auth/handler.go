@@ -52,8 +52,7 @@ func (h *Handler) Login(c *gin.Context) {
 		response.Fail(c, http.StatusForbidden, "user expired")
 		return
 	}
-	passOK := req.Password == u.Password || bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(req.Password)) == nil
-	if !passOK {
+	if bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(req.Password)) != nil {
 		response.Fail(c, http.StatusUnauthorized, "invalid credentials")
 		return
 	}

@@ -26,18 +26,24 @@ func (h *Handler) RechargeUserBalance(c *gin.Context) {
 		response.Fail(c, http.StatusNotFound, "user not found")
 		return
 	}
-	newBalance := user.BalanceUSD + req.AmountUSD
 	if err := h.DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Model(&model.User{}).Where("id = ?", uid).Update("balance_usd", newBalance).Error; err != nil {
+		if err := tx.Model(&model.User{}).Where("id = ?", uid).
+			Update("balance_usd", gorm.Expr("COALESCE(balance_usd,0) + ?", req.AmountUSD)).Error; err != nil {
 			return err
 		}
-		entry := model.BalanceLedger{UserID: uint(uid), Type: "recharge", AmountUSD: req.AmountUSD, BalanceUSD: newBalance, Note: req.Note}
+		var updated model.User
+		if err := tx.Select("id", "balance_usd").First(&updated, uid).Error; err != nil {
+			return err
+		}
+		entry := model.BalanceLedger{UserID: uint(uid), Type: "recharge", AmountUSD: req.AmountUSD, BalanceUSD: updated.BalanceUSD, Note: req.Note}
 		return tx.Create(&entry).Error
 	}); err != nil {
 		response.Fail(c, http.StatusInternalServerError, "recharge failed")
 		return
 	}
-	response.OK(c, gin.H{"user_id": uid, "balance_usd": newBalance})
+	var latest model.User
+	_ = h.DB.Select("id", "balance_usd").First(&latest, uid).Error
+	response.OK(c, gin.H{"user_id": uid, "balance_usd": latest.BalanceUSD})
 }
 
 // UserBalanceRecords GET /api/admin/users/:id/balance-records

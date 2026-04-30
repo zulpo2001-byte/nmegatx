@@ -103,7 +103,6 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 		Status    string `json:"status"`
 		Password  string `json:"password"`
 		ExpiresAt string `json:"expires_at"`
-		BalanceUSD    *float64 `json:"balance_usd"`
 		PaypalFeeRate *float64 `json:"paypal_fee_rate"`
 		StripeFeeRate *float64 `json:"stripe_fee_rate"`
 	}
@@ -130,9 +129,6 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 		if t, err := time.Parse(time.RFC3339, req.ExpiresAt); err == nil {
 			updates["expires_at"] = t
 		}
-	}
-	if req.BalanceUSD != nil {
-		updates["balance_usd"] = *req.BalanceUSD
 	}
 	if req.PaypalFeeRate != nil {
 		updates["paypal_fee_rate"] = *req.PaypalFeeRate

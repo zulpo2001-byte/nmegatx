@@ -314,18 +314,9 @@ func (s *GatewayService) GeneratePayLink(bApiKey string, payToken string, amount
 		if err != nil {
 			return "", fmt.Errorf("no available paypal account: %w", err)
 		}
-		// email 模式：直接构造 PayPal.me 链接
+		// email 模式不再支持：PayPal.me 用户名与邮箱前缀不可靠对应，易造成错付
 		if acc.Mode == "email" {
-			activeEmail := acc.ActiveEmail()
-			if activeEmail == "" {
-				return "", errors.New("paypal account email is empty")
-			}
-			// PayPal.me 链接格式：https://paypal.me/USERNAME/AMOUNT
-			// 仅在 email 模式下退化为 email 前缀，避免错误使用 TrimPrefix("", "")。
-			username := strings.Split(activeEmail, "@")[0]
-			paypalURL := fmt.Sprintf("https://paypal.me/%s/%.2f%s",
-				username, amount, strings.ToUpper(currency))
-			return paypalURL, nil
+			return "", errors.New("paypal email mode is disabled; use rest mode with client credentials")
 		}
 		// rest 模式：走 OAuth2 API
 		clientID := acc.ClientID
