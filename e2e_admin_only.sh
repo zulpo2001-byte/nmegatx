@@ -67,33 +67,62 @@ if [[ "$AUTO_MOCK" == "1" ]]; then
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading, time
-A_HITS=[]; B_ORDER_HITS=[]; B_COMPLETE_HITS=[]
+
+A_HITS = []
+B_ORDER_HITS = []
+B_COMPLETE_HITS = []
+
 class AHandler(BaseHTTPRequestHandler):
     def do_POST(self):
-        l=int(self.headers.get('Content-Length','0')); b=self.rfile.read(l).decode('utf-8','ignore')
-        A_HITS.append({"path":self.path,"body":b})
-        self.send_response(200); self.send_header('Content-Type','application/json'); self.end_headers(); self.wfile.write(b'{"ok":true}')
+        l = int(self.headers.get('Content-Length', '0'))
+        b = self.rfile.read(l).decode('utf-8', 'ignore')
+        A_HITS.append({"path": self.path, "body": b})
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        self.wfile.write(b'{"ok":true}')
+
 class BHandler(BaseHTTPRequestHandler):
     def do_POST(self):
-        l=int(self.headers.get('Content-Length','0')); b=self.rfile.read(l).decode('utf-8','ignore')
-        if self.path=="/wp-json/b-station/v1/order":
-            B_ORDER_HITS.append({"body":b})
-            d=json.dumps({"payment_url":"https://b.mock/pay/1","b_order_id":"B-MOCK-1"}).encode()
-            self.send_response(200); self.send_header('Content-Type','application/json'); self.send_header('Content-Length',str(len(d))); self.end_headers(); self.wfile.write(d); return
-        if self.path=="/wp-json/b-station/v1/complete":
-            B_COMPLETE_HITS.append({"body":b})
-            self.send_response(200); self.send_header('Content-Type','application/json'); self.end_headers(); self.wfile.write(b'{"ok":true}'); return
-        self.send_response(404); self.end_headers()
-def serve(p,h): HTTPServer(("0.0.0.0",p),h).serve_forever()
-if __name__=="__main__":
+        l = int(self.headers.get('Content-Length', '0'))
+        b = self.rfile.read(l).decode('utf-8', 'ignore')
+        if self.path == "/wp-json/b-station/v1/order":
+            B_ORDER_HITS.append({"body": b})
+            d = json.dumps({"payment_url": "https://b.mock/pay/1", "b_order_id": "B-MOCK-1"}).encode()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(d)))
+            self.end_headers()
+            self.wfile.write(d)
+            return
+        if self.path == "/wp-json/b-station/v1/complete":
+            B_COMPLETE_HITS.append({"body": b})
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(b'{"ok":true}')
+            return
+        self.send_response(404)
+        self.end_headers()
+
+def serve(p, h):
+    HTTPServer(("0.0.0.0", p), h).serve_forever()
+
+if __name__ == "__main__":
     import sys
-    a=int(sys.argv[1]); b=int(sys.argv[2])
-    threading.Thread(target=serve,args=(a,AHandler),daemon=True).start()
-    threading.Thread(target=serve,args=(b,BHandler),daemon=True).start()
+    a = int(sys.argv[1])
+    b = int(sys.argv[2])
+    threading.Thread(target=serve, args=(a, AHandler), daemon=True).start()
+    threading.Thread(target=serve, args=(b, BHandler), daemon=True).start()
     while True:
-        print(json.dumps({"a_hits":len(A_HITS),"b_order_hits":len(B_ORDER_HITS),"b_complete_hits":len(B_COMPLETE_HITS)}),flush=True)
+        print(json.dumps({
+            "a_hits": len(A_HITS),
+            "b_order_hits": len(B_ORDER_HITS),
+            "b_complete_hits": len(B_COMPLETE_HITS)
+        }), flush=True)
         time.sleep(2)
 PY
+
   python3 /tmp/mock_ab_server.py "$A_MOCK_PORT" "$B_MOCK_PORT" >/tmp/mock_ab_stat.log 2>&1 &
   MOCK_PID=$!
   trap 'kill ${MOCK_PID} >/dev/null 2>&1 || true' EXIT
