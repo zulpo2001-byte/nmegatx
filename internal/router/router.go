@@ -41,7 +41,6 @@ func New(cfg *config.Config, db *gorm.DB, rdb *redis.Client, queue *asynq.Client
 	r.StaticFile("/", "./frontend/login.html")
 	r.StaticFile("/login.html", "./frontend/login.html")
 	r.StaticFile("/dashboard.html", "./frontend/dashboard.html")
-	r.StaticFile("/pay.html", "./frontend/pay.html")
 	r.Static("/assets", "./frontend/assets")
 
 	// ── 公开 API ────────────────────────────────────────────────
@@ -192,8 +191,6 @@ func New(cfg *config.Config, db *gorm.DB, rdb *redis.Client, queue *asynq.Client
 		// 测试推送
 		ug.POST("/webhooks/:id/test", middleware.UserPerm("webhooks"), userH.TestWebhook)
 	}
-
-	r.GET("/pay/result", payH.Result)
 
 	r.NoRoute(func(c *gin.Context) {
 		c.File("./frontend/login.html")
