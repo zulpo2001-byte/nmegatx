@@ -3,7 +3,7 @@ package admin
 // metrics.go — 渠道监控指标（Redis 实时汇总）
 //
 // GET    /api/admin/metrics/summary               — 汇总所有端点的 B站请求 + Webhook 投递指标
-// DELETE /api/admin/metrics/:endpoint_id/reset    — 清除某端点的 Redis 指标计数
+// DELETE /api/admin/metrics/endpoints/:id/reset    — 清除某端点的 Redis 指标计数
 
 import (
 	"context"
@@ -138,19 +138,22 @@ func (h *Handler) MetricsSummary(c *gin.Context) {
 	})
 }
 
-// MetricsResetEndpoint DELETE /api/admin/metrics/:endpoint_id/reset
+// MetricsResetEndpoint DELETE /api/admin/metrics/endpoints/:id/reset
 // 清除某端点在 Redis 中的所有指标计数
 func (h *Handler) MetricsResetEndpoint(c *gin.Context) {
 	if h.RDB == nil {
 		response.Fail(c, http.StatusServiceUnavailable, "redis not available")
 		return
 	}
-	epID := c.Param("endpoint_id")
+	epID := c.Param("id")
+	if epID == "" {
+		epID = c.Param("endpoint_id") // 兼容旧路由
+	}
 	ctx := context.Background()
 	bKey := "nme:metrics:bstation:" + epID
 	wKey := "nme:metrics:webhook:" + epID
 	h.RDB.Del(ctx, bKey, wKey)
-	response.OK(c, gin.H{"endpoint_id": epID, "reset": true})
+	response.OK(c, gin.H{"id": epID, "reset": true})
 }
 
 // parseI64 安全地将字符串解析为 int64，解析失败返回 0

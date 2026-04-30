@@ -127,7 +127,8 @@ func New(cfg *config.Config, db *gorm.DB, rdb *redis.Client, queue *asynq.Client
 		// 渠道指标
 		ag.GET("/metrics/channels", middleware.AdminPerm("admin.stats.view"), adminH.ChannelMetrics)
 		ag.GET("/metrics/summary", middleware.AdminPerm("admin.stats.view"), adminH.MetricsSummary)
-		ag.DELETE("/metrics/:endpoint_id/reset", middleware.AdminPerm("admin.stats.view"), adminH.MetricsResetEndpoint)
+		ag.DELETE("/metrics/endpoints/:id/reset", middleware.AdminPerm("admin.stats.view"), adminH.MetricsResetEndpoint)
+		ag.DELETE("/metrics/:endpoint_id/reset", middleware.AdminPerm("admin.stats.view"), adminH.MetricsResetEndpoint) // backward-compatible alias
 
 		// 系统设置
 		ag.GET("/settings", middleware.AdminPerm("admin.settings.view"), adminH.GetSettings)
