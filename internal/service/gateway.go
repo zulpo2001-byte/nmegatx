@@ -31,14 +31,14 @@ type GatewayService struct {
 	SmartSvc *SmartRoutingService // 智能路由服务，用于 RecordRequest 和动态权重
 }
 
-// ResolveUserByAPIKey — A站下单用，查 api_keys 表
+// ResolveUserByAPIKey — A站下单用，查 webhook_endpoints 表 type=a
 func (s *GatewayService) ResolveUserByAPIKey(apiKey string) (uint, string, *model.User, error) {
-	var key model.APIKey
-	if err := s.DB.Where("api_key = ? AND enabled = true", apiKey).First(&key).Error; err != nil {
-		return 0, "", nil, errors.New("invalid api key")
+	var ep model.WebhookEndpoint
+	if err := s.DB.Where("a_api_key = ? AND type = 'a' AND enabled = true", apiKey).First(&ep).Error; err != nil {
+		return 0, "", nil, errors.New("invalid a_api_key")
 	}
 	var user model.User
-	if err := s.DB.First(&user, key.UserID).Error; err != nil {
+	if err := s.DB.First(&user, ep.UserID).Error; err != nil {
 		return 0, "", nil, errors.New("user not found")
 	}
 	if user.Status != "active" {
@@ -47,7 +47,7 @@ func (s *GatewayService) ResolveUserByAPIKey(apiKey string) (uint, string, *mode
 	if !user.ExpiresAt.IsZero() && user.ExpiresAt.Before(time.Now().UTC()) {
 		return 0, "", nil, errors.New("user expired")
 	}
-	return user.ID, key.Secret, &user, nil
+	return user.ID, ep.SharedSecret, &user, nil
 }
 
 // ResolveByBApiKey — B站回调/调pay-link用，查 webhook_endpoints 表 type=b

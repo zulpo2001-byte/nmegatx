@@ -177,11 +177,6 @@ func New(cfg *config.Config, db *gorm.DB, rdb *redis.Client, queue *asynq.Client
 		ug.POST("/stripe/:id/reset-daily", middleware.UserPerm("products_manage"), userH.ResetStripeDaily)
 		ug.POST("/stripe/:id/state", middleware.UserPerm("products_manage"), userH.SetStripeAccountState)
 
-		// API Keys（保留原有）
-		ug.GET("/api-keys", middleware.UserPerm("api_keys"), userH.APIKeys)
-		ug.POST("/api-keys", middleware.UserPerm("api_keys"), userH.CreateAPIKey)
-		ug.DELETE("/api-keys/:id", middleware.UserPerm("api_keys"), userH.DeleteAPIKey)
-
 		// Webhook 端点（保留原有 + 新增密钥轮换 + 测试）
 		ug.GET("/webhooks", middleware.UserPerm("webhooks"), userH.Webhooks)
 		ug.POST("/webhooks/a", middleware.UserPerm("webhooks"), userH.CreateWebhookA)
