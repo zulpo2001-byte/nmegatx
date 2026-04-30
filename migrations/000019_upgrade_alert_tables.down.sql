@@ -1,0 +1,9 @@
+ALTER TABLE alert_records DROP COLUMN IF EXISTS type;
+ALTER TABLE alert_records DROP COLUMN IF EXISTS title;
+ALTER TABLE alert_records DROP COLUMN IF EXISTS context;
+ALTER TABLE alert_records DROP COLUMN IF EXISTS acknowledged_by;
+ALTER TABLE alert_records DROP COLUMN IF EXISTS acknowledged_at;
+ALTER TABLE alert_records DROP COLUMN IF EXISTS resolved_at;
+ALTER TABLE alert_channels DROP COLUMN IF EXISTS name;
+ALTER TABLE alert_channels DROP COLUMN IF EXISTS config;
+ALTER TABLE alert_channels DROP COLUMN IF EXISTS levels;
