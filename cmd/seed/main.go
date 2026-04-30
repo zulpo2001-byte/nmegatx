@@ -152,7 +152,6 @@ func ensureMerchantUser(gdb *gorm.DB, email, password string) model.User {
 			"stripe_manage":true,
 			"strategy_manage":true,
 			"order_view":true,
-			"api_keys":true,
 			"webhooks":true
 		}`,
 		ExpiresAt: time.Now().AddDate(5, 0, 0),

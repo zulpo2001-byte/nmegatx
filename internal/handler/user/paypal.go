@@ -29,11 +29,13 @@ func (h *Handler) CreatePaypalAccount(c *gin.Context) {
 		Label              string  `json:"label"`
 		Mode               string  `json:"mode"`
 		Email              string  `json:"email"`
+		PaypalMeUsername   string  `json:"paypalme_username"`
 		ClientID           string  `json:"client_id"`
 		ClientSecret       string  `json:"client_secret"`
 		Sandbox            bool    `json:"sandbox"`
 		SandboxMode        bool    `json:"sandbox_mode"`
 		SandboxEmail       string  `json:"sandbox_email"`
+		SandboxPaypalMeUsername string `json:"sandbox_paypalme_username"`
 		SandboxClientID    string  `json:"sandbox_client_id"`
 		SandboxClientSecret string `json:"sandbox_client_secret"`
 		PollMode           string  `json:"poll_mode"`
@@ -78,11 +80,13 @@ func (h *Handler) CreatePaypalAccount(c *gin.Context) {
 		Label:               req.Label,
 		Mode:                req.Mode,
 		Email:               req.Email,
+		PaypalMeUsername:    req.PaypalMeUsername,
 		ClientID:            req.ClientID,
 		ClientSecret:        req.ClientSecret,
 		Sandbox:             req.Sandbox,
 		SandboxMode:         req.SandboxMode,
 		SandboxEmail:        req.SandboxEmail,
+		SandboxPaypalMeUsername: req.SandboxPaypalMeUsername,
 		SandboxClientID:     req.SandboxClientID,
 		SandboxClientSecret: req.SandboxClientSecret,
 		AccountState:        "active",
@@ -178,5 +182,4 @@ func (h *Handler) SetPaypalAccountState(c *gin.Context) {
 	h.DB.Model(&model.PaypalAccount{}).Where("id = ? AND user_id = ?", id, userID).Updates(updates)
 	response.OK(c, gin.H{"id": id, "account_state": req.State})
 }
-
 
