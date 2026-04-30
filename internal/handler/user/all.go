@@ -1,7 +1,10 @@
 package user
 
 import (
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -443,7 +446,13 @@ func buildConfigString(epType, nmeBase string, keys map[string]string) string {
 		data[k] = v
 	}
 	b, _ := json.Marshal(data)
-	return hex.EncodeToString(b) // base64 alternative using hex for simplicity
+	// 一键复制串：NME1.<payload>.<sig>
+	// payload 为 base64url，sig 为 HMAC-SHA256(base64url(payload))
+	payload := base64.RawURLEncoding.EncodeToString(b)
+	mac := hmac.New(sha256.New, []byte("nme-config-v1"))
+	_, _ = mac.Write([]byte(payload))
+	sig := hex.EncodeToString(mac.Sum(nil))
+	return fmt.Sprintf("NME1.%s.%s", payload, sig)
 }
 
 func randHex(n int) string {
