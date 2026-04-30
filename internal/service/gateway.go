@@ -506,8 +506,27 @@ func (s *GatewayService) CompleteByPayToken(token string, reportAmount float64, 
 		return nil, err
 	}
 	if feeAmount > 0 {
-		_ = s.DB.Model(&model.User{}).Where("id = ?", order.UserID).
-			Update("balance_usd", gorm.Expr("COALESCE(balance_usd,0) - ?", feeAmount)).Error
+		var updated model.User
+		if err := s.DB.Transaction(func(tx *gorm.DB) error {
+			if err := tx.Model(&model.User{}).Where("id = ?", order.UserID).
+				Update("balance_usd", gorm.Expr("COALESCE(balance_usd,0) - ?", feeAmount)).Error; err != nil {
+				return err
+			}
+			if err := tx.Select("id", "balance_usd").First(&updated, order.UserID).Error; err != nil {
+				return err
+			}
+			entry := model.BalanceLedger{
+				UserID:     order.UserID,
+				OrderID:    &order.ID,
+				Type:       "channel_fee",
+				AmountUSD:  -feeAmount,
+				BalanceUSD: updated.BalanceUSD,
+				Note:       "order completed fee deduction",
+			}
+			return tx.Create(&entry).Error
+		}); err != nil {
+			s.log().Warn("记录通道扣费失败", zap.Error(err), zap.Uint("order_id", order.ID))
+		}
 	}
 	order.Status = "completed"
 	order.PaidAt = &now

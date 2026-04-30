@@ -95,6 +95,8 @@ func New(cfg *config.Config, db *gorm.DB, rdb *redis.Client, queue *asynq.Client
 		ag.POST("/users/:id/toggle-status", middleware.AdminPerm("admin.users.manage"), adminH.AdminToggleStatus)
 		ag.PUT("/users/:id/permissions", middleware.AdminPerm("admin.users.manage"), adminH.AdminUpdateUserPermissions)
 		ag.POST("/users/:id/assign-role", middleware.AdminPerm("admin.users.manage"), adminH.AssignRole)
+		ag.POST("/users/:id/recharge", middleware.AdminPerm("admin.users.manage"), adminH.RechargeUserBalance)
+		ag.GET("/users/:id/balance-records", middleware.AdminPerm("admin.users.view"), adminH.UserBalanceRecords)
 
 		// 角色管理（完整 CRUD）
 		ag.GET("/roles", middleware.AdminPerm("admin.roles.view"), adminH.Roles)

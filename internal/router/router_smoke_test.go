@@ -32,6 +32,7 @@ func TestSmokeCoreFlows(t *testing.T) {
 	}
 	if err := db.AutoMigrate(
 		&model.User{}, &model.APIKey{}, &model.Order{},
+		&model.BalanceLedger{},
 		&model.WebhookEndpoint{}, &model.RefreshToken{},
 		&model.Role{}, &model.RiskRule{}, &model.AlertRecord{}, &model.AlertChannel{}, &model.GlobalSetting{}, &model.AuditLog{},
 		&model.PaypalAccount{}, &model.StripeConfig{}, &model.ChannelMetric{},
