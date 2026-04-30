@@ -80,7 +80,6 @@ X-Signature:  hex(HMAC-SHA256(secret, "$apiKey\n$timestamp\nSHA256($body)"))
 **SS 发出的请求体：**
 ```json
 {
-  "product_id":     "wc_product_123",
   "a_order_id":     "SHOP-20240101-001",
   "email":          "buyer@email.com",
   "ip":             "1.2.3.4",
