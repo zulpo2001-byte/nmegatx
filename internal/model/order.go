@@ -5,7 +5,6 @@ import "time"
 type Order struct {
 	ID              uint       `gorm:"primaryKey"                                              json:"id"`
 	UserID          uint       `gorm:"index:idx_order_user_status,priority:1"                  json:"user_id"`
-	ProductID       *uint      `gorm:"index"                                                   json:"product_id"`
 	AOrderID        string     `gorm:"size:128;index:idx_a_order_user,priority:1"              json:"a_order_id"`
 	BOrderID        string     `gorm:"size:128;index"                                          json:"b_order_id"`
 	BTransactionID  string     `gorm:"size:128"                                                json:"b_transaction_id"`
