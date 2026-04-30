@@ -3,12 +3,14 @@ package router_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/glebarez/sqlite"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"nme-v9/internal/config"
 	"nme-v9/internal/model"
@@ -16,7 +18,8 @@ import (
 )
 
 func TestAllBackendAPIRoutesRespond(t *testing.T) {
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	dsn := fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name())
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("open sqlite: %v", err)
 	}
@@ -30,8 +33,10 @@ func TestAllBackendAPIRoutesRespond(t *testing.T) {
 		t.Fatalf("migrate: %v", err)
 	}
 
-	admin := model.User{Email: "admin@cov.local", Password: "123456", Role: "admin", Status: "active", Permissions: `{"all":true}`}
-	user := model.User{Email: "user@cov.local", Password: "123456", Role: "user", Status: "active", Permissions: `{"all":true}`}
+	adminPwd, _ := bcrypt.GenerateFromPassword([]byte("123456"), bcrypt.DefaultCost)
+	userPwd, _ := bcrypt.GenerateFromPassword([]byte("123456"), bcrypt.DefaultCost)
+	admin := model.User{Email: "admin@cov.local", Password: string(adminPwd), Role: "admin", Status: "active", Permissions: `{"all":true}`}
+	user := model.User{Email: "user@cov.local", Password: string(userPwd), Role: "user", Status: "active", Permissions: `{"all":true}`}
 	_ = db.Create(&admin).Error
 	_ = db.Create(&user).Error
 

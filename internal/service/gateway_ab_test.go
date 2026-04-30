@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -43,11 +44,12 @@ func TestGatewayAPIKeyAndABEndpoints(t *testing.T) {
 	}))
 	defer bSrv.Close()
 
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	dsn := fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name())
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("open sqlite: %v", err)
 	}
-	if err := db.AutoMigrate(&model.User{}, &model.APIKey{}, &model.Order{}, &model.WebhookEndpoint{}); err != nil {
+	if err := db.AutoMigrate(&model.User{}, &model.Order{}, &model.WebhookEndpoint{}); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 
@@ -55,11 +57,7 @@ func TestGatewayAPIKeyAndABEndpoints(t *testing.T) {
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("seed user: %v", err)
 	}
-	key := model.APIKey{UserID: user.ID, APIKey: "ak_test", Secret: "sk_test", Enabled: true}
-	if err := db.Create(&key).Error; err != nil {
-		t.Fatalf("seed api key: %v", err)
-	}
-	aEP := model.WebhookEndpoint{UserID: user.ID, Type: "a", Enabled: true, URL: aSrv.URL, AApiKey: "a_api_key", SharedSecret: "a_shared"}
+	aEP := model.WebhookEndpoint{UserID: user.ID, Type: "a", Enabled: true, URL: aSrv.URL, AApiKey: "ak_test", SharedSecret: "sk_test"}
 	bEP := model.WebhookEndpoint{UserID: user.ID, Type: "b", Enabled: true, URL: bSrv.URL, BApiKey: "b_api_key", BSharedSecret: "b_shared"}
 	_ = db.Create(&aEP).Error
 	_ = db.Create(&bEP).Error
@@ -100,4 +98,3 @@ func TestGatewayAPIKeyAndABEndpoints(t *testing.T) {
 		t.Fatalf("B endpoint complete was not called")
 	}
 }
-

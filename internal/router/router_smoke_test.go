@@ -3,11 +3,13 @@ package router_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/glebarez/sqlite"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"nme-v9/internal/config"
 	"nme-v9/internal/model"
@@ -26,7 +28,8 @@ func TestSmokeCoreFlows(t *testing.T) {
 	}))
 	defer bStation.Close()
 
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	dsn := fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name())
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("open sqlite: %v", err)
 	}
@@ -40,17 +43,28 @@ func TestSmokeCoreFlows(t *testing.T) {
 		t.Fatalf("migrate: %v", err)
 	}
 
-	admin := model.User{Email: "admin@test.local", Password: "123456", Role: "admin", Status: "active", Permissions: `{"admin.stats.view":true,"admin.users.view":true}`}
-	user := model.User{Email: "user@test.local", Password: "123456", Role: "user", Status: "active", Permissions: `{"dashboard_view":true,"products_manage":true,"order_view":true,"api_keys":true,"webhooks":true}`}
+	adminPwd, _ := bcrypt.GenerateFromPassword([]byte("123456"), bcrypt.DefaultCost)
+	userPwd, _ := bcrypt.GenerateFromPassword([]byte("123456"), bcrypt.DefaultCost)
+	admin := model.User{Email: "admin@test.local", Password: string(adminPwd), Role: "admin", Status: "active", Permissions: `{"admin.stats.view":true,"admin.users.view":true}`}
+	user := model.User{Email: "user@test.local", Password: string(userPwd), Role: "user", Status: "active", Permissions: `{"dashboard_view":true,"paypal_manage":true,"stripe_manage":true,"order_view":true,"webhooks":true}`}
 	if err := db.Create(&admin).Error; err != nil {
 		t.Fatalf("seed admin: %v", err)
 	}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("seed user: %v", err)
 	}
-	key := model.APIKey{UserID: user.ID, APIKey: "ak_user_test", Secret: "sk_user_test", Enabled: true}
-	if err := db.Create(&key).Error; err != nil {
-		t.Fatalf("seed key: %v", err)
+	aWebhook := model.WebhookEndpoint{
+		UserID:        user.ID,
+		Type:          "a",
+		Label:         "a-endpoint",
+		URL:           "https://a.local/callback",
+		PaymentMethod: "all",
+		Enabled:       true,
+		AApiKey:       "ak_user_test",
+		SharedSecret:  "sk_user_test",
+	}
+	if err := db.Create(&aWebhook).Error; err != nil {
+		t.Fatalf("seed a webhook: %v", err)
 	}
 	bWebhook := model.WebhookEndpoint{
 		UserID:        user.ID,
@@ -111,7 +125,7 @@ func TestSmokeCoreFlows(t *testing.T) {
 		"checkout_url": "https://a.local/checkout",
 	}
 	orderBody, _ := json.Marshal(orderReq)
-	orderHeaders := hmacutil.BuildHeaders(key.APIKey, key.Secret, orderBody)
+	orderHeaders := hmacutil.BuildHeaders(aWebhook.AApiKey, aWebhook.SharedSecret, orderBody)
 	orderHeaders["Content-Type"] = "application/json"
 	resp = callJSON(t, r, "POST", "/api/gateway/order", orderReq, map[string]string{
 		"X-Api-Key":    orderHeaders["X-Api-Key"],
