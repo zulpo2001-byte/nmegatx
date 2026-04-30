@@ -157,10 +157,6 @@ func New(cfg *config.Config, db *gorm.DB, rdb *redis.Client, queue *asynq.Client
 		// 用户权重快照（只读）
 		ug.GET("/smart-routing/my-weights", middleware.UserPerm("dashboard_view"), userH.UserSmartRoutingWeights)
 
-		// 轮询策略
-		ug.GET("/strategy", middleware.UserPerm("strategy_manage"), userH.Strategy)
-		ug.PUT("/strategy", middleware.UserPerm("strategy_manage"), userH.UpdateStrategy)
-
 		// PayPal 账号
 		ug.GET("/paypal", middleware.UserPerm("products_manage"), userH.PaypalAccounts)
 		ug.POST("/paypal", middleware.UserPerm("products_manage"), userH.CreatePaypalAccount)
