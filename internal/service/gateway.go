@@ -81,12 +81,6 @@ func (s *GatewayService) CreateOrder(user *model.User, p CreateOrderParams) (*mo
 		return &exists, nil
 	}
 
-	// 选 B站产品（只从该用户的产品池）
-	product, err := SelectProduct(s.DB, user)
-	if err != nil {
-		return nil, fmt.Errorf("no available B-station product: %w", err)
-	}
-
 	currency := p.Currency
 	if currency == "" {
 		currency = "USD"
@@ -150,7 +144,6 @@ func (s *GatewayService) CreateOrder(user *model.User, p CreateOrderParams) (*mo
 
 	order := &model.Order{
 		UserID:          user.ID,
-		ProductID:       &product.ID,
 		AOrderID:        p.AOrderID,
 		Amount:          p.Amount,
 		Status:          "pending",
@@ -173,7 +166,7 @@ func (s *GatewayService) CreateOrder(user *model.User, p CreateOrderParams) (*mo
 		return nil, err
 	}
 
-	bResult, err := s.CallBStation(user, order, product)
+	bResult, err := s.CallBStation(user, order)
 	if err != nil || !bResult.Success {
 		errMsg := "B-station call failed"
 		if err != nil {
@@ -201,8 +194,6 @@ func (s *GatewayService) CreateOrder(user *model.User, p CreateOrderParams) (*mo
 	order.BOrderID = bResult.BOrderID
 	order.PaymentURL = bResult.PaymentURL
 
-	RecordUsage(s.DB, product.ID)
-
 	if s.Queue != nil {
 		if t, e := task.NewCheckAbandonedTask(order.ID); e == nil {
 			_, _ = s.Queue.Enqueue(t, asynq.ProcessIn(210*time.Second), asynq.MaxRetry(1))
@@ -211,7 +202,6 @@ func (s *GatewayService) CreateOrder(user *model.User, p CreateOrderParams) (*mo
 
 	s.log().Info("Gateway order created",
 		zap.String("a_order_id", p.AOrderID),
-		zap.String("product", product.BProductID),
 		zap.String("payment_method", paymentMethod),
 		zap.String("gateway_label", gatewayLabel),
 		zap.Any("validity_days", validityDays),
@@ -228,7 +218,7 @@ type BStationResult struct {
 	Error      string
 }
 
-func (s *GatewayService) CallBStation(user *model.User, order *model.Order, product *model.Product) (*BStationResult, error) {
+func (s *GatewayService) CallBStation(user *model.User, order *model.Order) (*BStationResult, error) {
 	var endpoint model.WebhookEndpoint
 	err := s.DB.Where("user_id = ? AND type = 'b' AND enabled = true", user.ID).
 		Order("id desc").First(&endpoint).Error
@@ -243,7 +233,6 @@ func (s *GatewayService) CallBStation(user *model.User, order *model.Order, prod
 	bURL := baseURL + "/wp-json/b-station/v1/order"
 
 	payload := map[string]any{
-		"product_id":     product.BProductID,
 		"a_order_id":     order.AOrderID,
 		"pay_token":      order.PayToken,
 		"email":          order.Email,

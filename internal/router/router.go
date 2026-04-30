@@ -157,14 +157,6 @@ func New(cfg *config.Config, db *gorm.DB, rdb *redis.Client, queue *asynq.Client
 		// 用户权重快照（只读）
 		ug.GET("/smart-routing/my-weights", middleware.UserPerm("dashboard_view"), userH.UserSmartRoutingWeights)
 
-		// 产品通道
-		ug.GET("/products", middleware.UserPerm("products_manage"), userH.Products)
-		ug.POST("/products", middleware.UserPerm("products_manage"), userH.CreateProduct)
-		ug.PUT("/products/:id", middleware.UserPerm("products_manage"), userH.UpdateProduct)
-		ug.DELETE("/products/:id", middleware.UserPerm("products_manage"), userH.DeleteProduct)
-		ug.POST("/products/:id/toggle", middleware.UserPerm("products_manage"), userH.ToggleProduct)
-		ug.POST("/products/reorder", middleware.UserPerm("products_manage"), userH.ReorderProducts)
-
 		// 轮询策略
 		ug.GET("/strategy", middleware.UserPerm("strategy_manage"), userH.Strategy)
 		ug.PUT("/strategy", middleware.UserPerm("strategy_manage"), userH.UpdateStrategy)

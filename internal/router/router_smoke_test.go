@@ -31,7 +31,7 @@ func TestSmokeCoreFlows(t *testing.T) {
 		t.Fatalf("open sqlite: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&model.User{}, &model.APIKey{}, &model.Product{}, &model.Order{},
+		&model.User{}, &model.APIKey{}, &model.Order{},
 		&model.WebhookEndpoint{}, &model.RefreshToken{},
 		&model.Role{}, &model.RiskRule{}, &model.AlertRecord{}, &model.AlertChannel{}, &model.GlobalSetting{}, &model.AuditLog{},
 		&model.PaypalAccount{}, &model.StripeConfig{}, &model.ChannelMetric{},
@@ -63,10 +63,6 @@ func TestSmokeCoreFlows(t *testing.T) {
 	}
 	if err := db.Create(&bWebhook).Error; err != nil {
 		t.Fatalf("seed b webhook: %v", err)
-	}
-	prod := model.Product{UserID: user.ID, BProductID: "B-PROD-1", Weight: 1, PollOrder: 1, Enabled: true}
-	if err := db.Create(&prod).Error; err != nil {
-		t.Fatalf("seed product: %v", err)
 	}
 	stripe := model.StripeConfig{
 		UserID:       user.ID,
@@ -104,12 +100,6 @@ func TestSmokeCoreFlows(t *testing.T) {
 	r.ServeHTTP(w, req)
 	if w.Code != http.StatusForbidden {
 		t.Fatalf("expected 403 for user on admin route, got %d", w.Code)
-	}
-
-	// User products route should pass with user token.
-	resp = callJSON(t, r, "GET", "/api/user/products", nil, map[string]string{"Authorization": "Bearer " + userToken})
-	if !resp["ok"].(bool) {
-		t.Fatalf("user products should pass: %#v", resp)
 	}
 
 	// Gateway order.
