@@ -41,11 +41,27 @@ func AssessRiskFull(db *gorm.DB, rdb *redis.Client, amount float64, ip string, u
 	score := 0
 	ctx := context.Background()
 
+	// 先读取 DB 规则，避免和内置规则对同一维度双重叠加
+	var rules []model.RiskRule
+	hasIPFreqRule := false
+	hasLargeAmountRule := false
+	if db != nil {
+		db.Where("enabled = true").Find(&rules)
+		for _, rule := range rules {
+			if rule.Type == "ip_frequency" {
+				hasIPFreqRule = true
+			}
+			if rule.Type == "amount_range" {
+				hasLargeAmountRule = true
+			}
+		}
+	}
+
 	// ── 第一层：内置实时规则 ────────────────────────────────────────
 
 	// 1a. IP 频率：先检查当前计数，下单后由 IncrIPCount 递增
 	// 这里只读不写，防止风控检查本身影响计数
-	if ip != "" && rdb != nil {
+	if !hasIPFreqRule && ip != "" && rdb != nil {
 		ipKey := fmt.Sprintf("risk:ip_freq:%s", ip)
 		cnt, _ := rdb.Get(ctx, ipKey).Int64()
 		if cnt >= 5 {
@@ -55,7 +71,7 @@ func AssessRiskFull(db *gorm.DB, rdb *redis.Client, amount float64, ip string, u
 	}
 
 	// 1b. 大额交易：> $1000 → +20
-	if amount > 1000 {
+	if !hasLargeAmountRule && amount > 1000 {
 		score += 20
 		reasons = append(reasons, fmt.Sprintf("large amount: %.2f", amount))
 	}
@@ -72,9 +88,6 @@ func AssessRiskFull(db *gorm.DB, rdb *redis.Client, amount float64, ip string, u
 
 	// ── 第二层：DB 规则引擎 ─────────────────────────────────────────
 	if db != nil {
-		var rules []model.RiskRule
-		db.Where("enabled = true").Find(&rules)
-
 		dbScore := 0
 		for _, rule := range rules {
 			hit, reason := matchRule(rule, amount, ip, rdb)

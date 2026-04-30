@@ -5,9 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"testing"
-	"time"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -18,12 +16,23 @@ import (
 )
 
 func TestSmokeCoreFlows(t *testing.T) {
+	bStation := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/wp-json/b-station/v1/order" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"ok":true,"data":{"payment_url":"https://b.local/pay/abc","b_order_id":"B-10001"}}`))
+	}))
+	defer bStation.Close()
+
 	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("open sqlite: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&model.User{}, &model.APIKey{}, &model.Product{}, &model.Order{},
+		&model.User{}, &model.APIKey{}, &model.Order{},
+		&model.BalanceLedger{},
 		&model.WebhookEndpoint{}, &model.RefreshToken{},
 		&model.Role{}, &model.RiskRule{}, &model.AlertRecord{}, &model.AlertChannel{}, &model.GlobalSetting{}, &model.AuditLog{},
 		&model.PaypalAccount{}, &model.StripeConfig{}, &model.ChannelMetric{},
@@ -43,9 +52,28 @@ func TestSmokeCoreFlows(t *testing.T) {
 	if err := db.Create(&key).Error; err != nil {
 		t.Fatalf("seed key: %v", err)
 	}
-	prod := model.Product{UserID: user.ID, BProductID: "B-PROD-1", Weight: 1, PollOrder: 1, Enabled: true}
-	if err := db.Create(&prod).Error; err != nil {
-		t.Fatalf("seed product: %v", err)
+	bWebhook := model.WebhookEndpoint{
+		UserID:        user.ID,
+		Type:          "b",
+		Label:         "b-endpoint",
+		URL:           bStation.URL,
+		PaymentMethod: "all",
+		Enabled:       true,
+		BApiKey:       "bk_user_test",
+		BSharedSecret: "bsk_user_test",
+	}
+	if err := db.Create(&bWebhook).Error; err != nil {
+		t.Fatalf("seed b webhook: %v", err)
+	}
+	stripe := model.StripeConfig{
+		UserID:       user.ID,
+		Label:        "stripe-main",
+		SecretKey:    "sk_test_x",
+		AccountState: "active",
+		Enabled:      true,
+	}
+	if err := db.Create(&stripe).Error; err != nil {
+		t.Fatalf("seed stripe: %v", err)
 	}
 
 	cfg := &config.Config{
@@ -75,27 +103,21 @@ func TestSmokeCoreFlows(t *testing.T) {
 		t.Fatalf("expected 403 for user on admin route, got %d", w.Code)
 	}
 
-	// User products route should pass with user token.
-	resp = callJSON(t, r, "GET", "/api/user/products", nil, map[string]string{"Authorization": "Bearer " + userToken})
-	if !resp["ok"].(bool) {
-		t.Fatalf("user products should pass: %#v", resp)
-	}
-
 	// Gateway order.
-	ts := strconv.FormatInt(time.Now().Unix(), 10)
 	orderReq := map[string]any{
 		"a_order_id":   "A-10001",
 		"amount":       188.5,
 		"return_url":   "https://a.local/thanks",
 		"checkout_url": "https://a.local/checkout",
 	}
-	raw := "A-10001|" + ts + "|" + key.APIKey
-	sig := hmacutil.Sign(key.Secret, raw)
+	orderBody, _ := json.Marshal(orderReq)
+	orderHeaders := hmacutil.BuildHeaders(key.APIKey, key.Secret, orderBody)
+	orderHeaders["Content-Type"] = "application/json"
 	resp = callJSON(t, r, "POST", "/api/gateway/order", orderReq, map[string]string{
-		"X-Api-Key":    key.APIKey,
-		"X-Timestamp":  ts,
-		"X-Signature":  sig,
-		"Content-Type": "application/json",
+		"X-Api-Key":    orderHeaders["X-Api-Key"],
+		"X-Timestamp":  orderHeaders["X-Timestamp"],
+		"X-Signature":  orderHeaders["X-Signature"],
+		"Content-Type": orderHeaders["Content-Type"],
 	})
 	if !resp["ok"].(bool) {
 		t.Fatalf("gateway order failed: %#v", resp)
@@ -104,15 +126,15 @@ func TestSmokeCoreFlows(t *testing.T) {
 	payToken := data["pay_token"].(string)
 
 	// Gateway callback complete.
-	ts2 := strconv.FormatInt(time.Now().Unix(), 10)
 	callbackReq := map[string]any{"pay_token": payToken, "status": "completed"}
-	raw2 := payToken + "|completed|" + ts2 + "|" + key.APIKey
-	sig2 := hmacutil.Sign(key.Secret, raw2)
+	callbackBody, _ := json.Marshal(callbackReq)
+	callbackHeaders := hmacutil.BuildHeaders(bWebhook.BApiKey, bWebhook.BSharedSecret, callbackBody)
+	callbackHeaders["Content-Type"] = "application/json"
 	resp = callJSON(t, r, "POST", "/api/gateway/callback", callbackReq, map[string]string{
-		"X-Api-Key":    key.APIKey,
-		"X-Timestamp":  ts2,
-		"X-Signature":  sig2,
-		"Content-Type": "application/json",
+		"X-Api-Key":    callbackHeaders["X-Api-Key"],
+		"X-Timestamp":  callbackHeaders["X-Timestamp"],
+		"X-Signature":  callbackHeaders["X-Signature"],
+		"Content-Type": callbackHeaders["Content-Type"],
 	})
 	if !resp["ok"].(bool) {
 		t.Fatalf("gateway callback failed: %#v", resp)

@@ -1,12 +1,14 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"os"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
+	gormlogger "gorm.io/gorm/logger"
 	"nme-v9/internal/config"
 	"nme-v9/internal/model"
 	"nme-v9/internal/pkg/db"
@@ -21,6 +23,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	// Seed 场景下忽略 ErrRecordNotFound 的错误日志，避免“首次写入”时刷屏误导。
+	gdb = gdb.Session(&gorm.Session{
+		Logger: gormlogger.Default.LogMode(gormlogger.Warn),
+	})
 
 	adminEmail := getenv("SEED_ADMIN_EMAIL", "admin@nme.local")
 	adminPassword := getenv("SEED_ADMIN_PASSWORD", "Admin@123456")
@@ -44,6 +50,8 @@ func ensureAdmin(gdb *gorm.DB, email, password string) model.User {
 	var user model.User
 	if err := gdb.Where("email = ?", email).First(&user).Error; err == nil {
 		return user
+	} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		log.Fatal(err)
 	}
 	hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	user = model.User{
@@ -64,6 +72,8 @@ func ensureAPIKey(gdb *gorm.DB, userID uint, apiKey, secret string) {
 	var key model.APIKey
 	if err := gdb.Where("api_key = ?", apiKey).First(&key).Error; err == nil {
 		return
+	} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		log.Fatal(err)
 	}
 	key = model.APIKey{
 		UserID:  userID,
@@ -87,6 +97,8 @@ func ensureGlobalSettings(gdb *gorm.DB) {
 		var exists model.GlobalSetting
 		if err := gdb.Where("key = ?", s.key).First(&exists).Error; err == nil {
 			continue // 已存在，不覆盖
+		} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Fatal(err)
 		}
 		gdb.Create(&model.GlobalSetting{Key: s.key, Value: s.val})
 	}
@@ -105,8 +117,10 @@ func ensureRiskRules(gdb *gorm.DB) {
 	}
 	for _, r := range defaults {
 		var exists model.RiskRule
-		if gdb.Where("name = ?", r.Name).First(&exists).Error == nil {
+		if err := gdb.Where("name = ?", r.Name).First(&exists).Error; err == nil {
 			continue
+		} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Fatal(err)
 		}
 		item := model.RiskRule{
 			Name: r.Name, Type: r.Type, Action: r.Action,
@@ -123,6 +137,8 @@ func ensureMerchantUser(gdb *gorm.DB, email, password string) model.User {
 	var user model.User
 	if err := gdb.Where("email = ?", email).First(&user).Error; err == nil {
 		return user
+	} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		log.Fatal(err)
 	}
 	hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	user = model.User{
@@ -132,10 +148,10 @@ func ensureMerchantUser(gdb *gorm.DB, email, password string) model.User {
 		Status:   "active",
 		Permissions: `{
 			"dashboard_view":true,
-			"products_manage":true,
+			"paypal_manage":true,
+			"stripe_manage":true,
 			"strategy_manage":true,
 			"order_view":true,
-			"api_keys":true,
 			"webhooks":true
 		}`,
 		ExpiresAt: time.Now().AddDate(5, 0, 0),
