@@ -32,9 +32,9 @@ func SelectProduct(db *gorm.DB, user *model.User) (*model.Product, error) {
 	}
 }
 
-// roundRobinAtomic picks the product with the oldest last_used_at using
-// an atomic timestamp update so concurrent callers get different products.
-// NOTE: total_used increment is handled by RecordUsage() in the caller.
+// roundRobinAtomic picks the product with the oldest last_used_at.
+// NOTE: usage persistence (last_used_at/total_used) is handled by RecordUsage()
+// after downstream order creation succeeds.
 func roundRobinAtomic(db *gorm.DB, list []model.Product) (*model.Product, error) {
 	best := &list[0]
 	bestTs := lastUsedTs(list[0])
@@ -45,10 +45,6 @@ func roundRobinAtomic(db *gorm.DB, list []model.Product) (*model.Product, error)
 		}
 	}
 
-	// Immediately stamp last_used_at so the next concurrent call picks a different product.
-	now := time.Now()
-	db.Model(&model.Product{}).Where("id = ?", best.ID).
-		Update("last_used_at", &now)
 	return best, nil
 }
 

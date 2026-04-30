@@ -44,6 +44,9 @@ func (s *GatewayService) ResolveUserByAPIKey(apiKey string) (uint, string, *mode
 	if user.Status != "active" {
 		return 0, "", nil, errors.New("user inactive")
 	}
+	if !user.ExpiresAt.IsZero() && user.ExpiresAt.Before(time.Now().UTC()) {
+		return 0, "", nil, errors.New("user expired")
+	}
 	return user.ID, key.Secret, &user, nil
 }
 
@@ -328,10 +331,11 @@ func (s *GatewayService) GeneratePayLink(bApiKey string, payToken string, amount
 			if activeEmail == "" {
 				return "", errors.New("paypal account email is empty")
 			}
-			// PayPal.me 链接格式：https://paypal.me/EMAIL/AMOUNT
+			// PayPal.me 链接格式：https://paypal.me/USERNAME/AMOUNT
+			// 仅在 email 模式下退化为 email 前缀，避免错误使用 TrimPrefix("", "")。
+			username := strings.Split(activeEmail, "@")[0]
 			paypalURL := fmt.Sprintf("https://paypal.me/%s/%.2f%s",
-				strings.TrimPrefix(strings.Split(activeEmail, "@")[0], ""),
-				amount, strings.ToUpper(currency))
+				username, amount, strings.ToUpper(currency))
 			return paypalURL, nil
 		}
 		// rest 模式：走 OAuth2 API

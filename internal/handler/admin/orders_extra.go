@@ -42,9 +42,10 @@ func (h *Handler) GetResetMode(c *gin.Context) {
 // 强制将所有 paypal_accounts 和 stripe_configs 的 daily_orders/daily_amount 归零
 func (h *Handler) ForceReset(c *gin.Context) {
 	now := time.Now().UTC()
+	todayDate, _ := time.Parse("2006-01-02", now.Format("2006-01-02"))
 
-	res1 := h.DB.Exec("UPDATE paypal_accounts SET daily_orders=0, daily_amount=0, last_reset_date=?", now)
-	res2 := h.DB.Exec("UPDATE stripe_configs  SET daily_orders=0, daily_amount=0, last_reset_date=?", now)
+	res1 := h.DB.Exec("UPDATE paypal_accounts SET daily_orders=0, daily_amount=0, last_reset_date=?", todayDate)
+	res2 := h.DB.Exec("UPDATE stripe_configs  SET daily_orders=0, daily_amount=0, last_reset_date=?", todayDate)
 
 	if res1.Error != nil || res2.Error != nil {
 		response.Fail(c, http.StatusInternalServerError, "force reset failed")
@@ -55,18 +56,4 @@ func (h *Handler) ForceReset(c *gin.Context) {
 		"paypal_rows_reset": res1.RowsAffected,
 		"stripe_rows_reset": res2.RowsAffected,
 	})
-}
-
-// ToggleAlertChannel POST /api/admin/alert-channels/:id/toggle
-// 启用/禁用某条告警渠道
-func (h *Handler) ToggleAlertChannel(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	var ch model.AlertChannel
-	if err := h.DB.First(&ch, id).Error; err != nil {
-		response.Fail(c, http.StatusNotFound, "alert channel not found")
-		return
-	}
-	newEnabled := !ch.Enabled
-	h.DB.Model(&ch).Update("enabled", newEnabled)
-	response.OK(c, gin.H{"id": id, "enabled": newEnabled})
 }
