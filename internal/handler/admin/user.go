@@ -79,6 +79,11 @@ func (h *Handler) CreateUser(c *gin.Context) {
 		response.Fail(c, http.StatusBadRequest, "create user failed: "+err.Error())
 		return
 	}
+	if err := createTenantTables(h.DB, u.ID); err != nil {
+		_ = h.DB.Delete(&model.User{}, u.ID).Error
+		response.Fail(c, http.StatusInternalServerError, "create tenant tables failed: "+err.Error())
+		return
+	}
 	u.Password = ""
 	response.OK(c, u)
 }
