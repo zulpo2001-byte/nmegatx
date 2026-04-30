@@ -160,22 +160,22 @@ func New(cfg *config.Config, db *gorm.DB, rdb *redis.Client, queue *asynq.Client
 		ug.GET("/smart-routing/my-weights", middleware.UserPerm("dashboard_view"), userH.UserSmartRoutingWeights)
 
 		// PayPal 账号
-		ug.GET("/paypal", middleware.UserPerm("products_manage"), userH.PaypalAccounts)
-		ug.POST("/paypal", middleware.UserPerm("products_manage"), userH.CreatePaypalAccount)
-		ug.PUT("/paypal/:id", middleware.UserPerm("products_manage"), userH.UpdatePaypalAccount)
-		ug.DELETE("/paypal/:id", middleware.UserPerm("products_manage"), userH.DeletePaypalAccount)
-		ug.POST("/paypal/:id/toggle", middleware.UserPerm("products_manage"), userH.TogglePaypalAccount)
-		ug.POST("/paypal/:id/reset-daily", middleware.UserPerm("products_manage"), userH.ResetPaypalDaily)
-		ug.POST("/paypal/:id/state", middleware.UserPerm("products_manage"), userH.SetPaypalAccountState)
+		ug.GET("/paypal", middleware.UserPerm("paypal_manage"), userH.PaypalAccounts)
+		ug.POST("/paypal", middleware.UserPerm("paypal_manage"), userH.CreatePaypalAccount)
+		ug.PUT("/paypal/:id", middleware.UserPerm("paypal_manage"), userH.UpdatePaypalAccount)
+		ug.DELETE("/paypal/:id", middleware.UserPerm("paypal_manage"), userH.DeletePaypalAccount)
+		ug.POST("/paypal/:id/toggle", middleware.UserPerm("paypal_manage"), userH.TogglePaypalAccount)
+		ug.POST("/paypal/:id/reset-daily", middleware.UserPerm("paypal_manage"), userH.ResetPaypalDaily)
+		ug.POST("/paypal/:id/state", middleware.UserPerm("paypal_manage"), userH.SetPaypalAccountState)
 
 		// Stripe 配置
-		ug.GET("/stripe", middleware.UserPerm("products_manage"), userH.StripeConfigs)
-		ug.POST("/stripe", middleware.UserPerm("products_manage"), userH.CreateStripeConfig)
-		ug.PUT("/stripe/:id", middleware.UserPerm("products_manage"), userH.UpdateStripeConfig)
-		ug.DELETE("/stripe/:id", middleware.UserPerm("products_manage"), userH.DeleteStripeConfig)
-		ug.POST("/stripe/:id/toggle", middleware.UserPerm("products_manage"), userH.ToggleStripeConfig)
-		ug.POST("/stripe/:id/reset-daily", middleware.UserPerm("products_manage"), userH.ResetStripeDaily)
-		ug.POST("/stripe/:id/state", middleware.UserPerm("products_manage"), userH.SetStripeAccountState)
+		ug.GET("/stripe", middleware.UserPerm("stripe_manage"), userH.StripeConfigs)
+		ug.POST("/stripe", middleware.UserPerm("stripe_manage"), userH.CreateStripeConfig)
+		ug.PUT("/stripe/:id", middleware.UserPerm("stripe_manage"), userH.UpdateStripeConfig)
+		ug.DELETE("/stripe/:id", middleware.UserPerm("stripe_manage"), userH.DeleteStripeConfig)
+		ug.POST("/stripe/:id/toggle", middleware.UserPerm("stripe_manage"), userH.ToggleStripeConfig)
+		ug.POST("/stripe/:id/reset-daily", middleware.UserPerm("stripe_manage"), userH.ResetStripeDaily)
+		ug.POST("/stripe/:id/state", middleware.UserPerm("stripe_manage"), userH.SetStripeAccountState)
 
 		// Webhook 端点（保留原有 + 新增密钥轮换 + 测试）
 		ug.GET("/webhooks", middleware.UserPerm("webhooks"), userH.Webhooks)

@@ -27,6 +27,11 @@ func UserPerm(perm string) gin.HandlerFunc {
 			c.Next()
 			return
 		}
+		// 兼容老权限键：products_manage -> paypal_manage/stripe_manage
+		if (perm == "paypal_manage" || perm == "stripe_manage") && perms["products_manage"] {
+			c.Next()
+			return
+		}
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"ok": false, "message": "permission denied"})
 	}
 }

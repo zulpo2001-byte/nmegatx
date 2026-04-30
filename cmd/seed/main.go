@@ -148,7 +148,8 @@ func ensureMerchantUser(gdb *gorm.DB, email, password string) model.User {
 		Status:   "active",
 		Permissions: `{
 			"dashboard_view":true,
-			"products_manage":true,
+			"paypal_manage":true,
+			"stripe_manage":true,
 			"strategy_manage":true,
 			"order_view":true,
 			"api_keys":true,
