@@ -95,7 +95,6 @@ func (h *Handler) Orders(c *gin.Context) {
 }
 
 // AuditLogs GET /api/admin/audit-logs
-// AuditLogs GET /api/admin/audit-logs
 // 支持过滤：?actor_id=N&action=xxx&method=POST&days=7&page=1&page_size=50
 func (h *Handler) AuditLogs(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))

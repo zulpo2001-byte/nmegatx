@@ -17,6 +17,10 @@ import (
 	"nme-v9/internal/service"
 )
 
+func isExpiredUser(u model.User) bool {
+	return !u.ExpiresAt.IsZero() && u.ExpiresAt.Before(time.Now().UTC())
+}
+
 type Handler struct {
 	DB             *gorm.DB
 	JWTSecret      string
@@ -42,6 +46,10 @@ func (h *Handler) Login(c *gin.Context) {
 	}
 	if u.Status != "active" {
 		response.Fail(c, http.StatusForbidden, "user inactive")
+		return
+	}
+	if isExpiredUser(u) {
+		response.Fail(c, http.StatusForbidden, "user expired")
 		return
 	}
 	passOK := req.Password == u.Password || bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(req.Password)) == nil
@@ -99,6 +107,10 @@ func (h *Handler) Refresh(c *gin.Context) {
 	}
 	if u.Status != "active" {
 		response.Fail(c, http.StatusForbidden, "user inactive")
+		return
+	}
+	if isExpiredUser(u) {
+		response.Fail(c, http.StatusForbidden, "user expired")
 		return
 	}
 	perms := parsePermissions(u.Role, u.Permissions)

@@ -1,7 +1,10 @@
 package user
 
 import (
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -19,162 +22,6 @@ import (
 type Handler struct {
 	DB      *gorm.DB
 	BaseURL string // e.g. https://nme.example.com
-}
-
-// ════════════════════════════════════════════════════════
-// 产品通道管理
-// ════════════════════════════════════════════════════════
-
-func (h *Handler) Products(c *gin.Context) {
-	userID := c.GetUint("user_id")
-	var items []model.Product
-	if err := h.DB.Where("user_id = ?", userID).Order("poll_order asc, id asc").Find(&items).Error; err != nil {
-		response.Fail(c, http.StatusInternalServerError, "query products failed")
-		return
-	}
-	response.OK(c, gin.H{"items": items})
-}
-
-func (h *Handler) CreateProduct(c *gin.Context) {
-	userID := c.GetUint("user_id")
-	var req struct {
-		Label      string `json:"label"`
-		BProductID string `json:"b_product_id"`
-		Weight     int    `json:"weight"`
-		PollOrder  *int   `json:"poll_order"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil || req.BProductID == "" {
-		response.Fail(c, http.StatusBadRequest, "invalid payload: b_product_id required")
-		return
-	}
-	if req.Weight <= 0 {
-		req.Weight = 1
-	}
-	// Auto poll_order = max + 1
-	var maxOrder int
-	h.DB.Model(&model.Product{}).Where("user_id = ?", userID).Select("COALESCE(MAX(poll_order), -1)").Scan(&maxOrder)
-	pollOrder := maxOrder + 1
-	if req.PollOrder != nil && *req.PollOrder >= 0 {
-		pollOrder = *req.PollOrder
-	}
-
-	p := model.Product{
-		UserID:     userID,
-		Label:      req.Label,
-		BProductID: req.BProductID,
-		Weight:     req.Weight,
-		PollOrder:  pollOrder,
-		Enabled:    true,
-	}
-	if err := h.DB.Create(&p).Error; err != nil {
-		response.Fail(c, http.StatusBadRequest, "create product failed")
-		return
-	}
-	response.OK(c, p)
-}
-
-func (h *Handler) UpdateProduct(c *gin.Context) {
-	userID := c.GetUint("user_id")
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	var req map[string]any
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Fail(c, http.StatusBadRequest, "invalid payload")
-		return
-	}
-	delete(req, "id")
-	delete(req, "user_id")
-	delete(req, "total_used")
-	delete(req, "last_used_at")
-	if err := h.DB.Model(&model.Product{}).Where("id = ? AND user_id = ?", id, userID).Updates(req).Error; err != nil {
-		response.Fail(c, http.StatusInternalServerError, "update product failed")
-		return
-	}
-	response.OK(c, gin.H{"id": id, "updated": true})
-}
-
-func (h *Handler) DeleteProduct(c *gin.Context) {
-	userID := c.GetUint("user_id")
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	if err := h.DB.Where("id = ? AND user_id = ?", id, userID).Delete(&model.Product{}).Error; err != nil {
-		response.Fail(c, http.StatusInternalServerError, "delete product failed")
-		return
-	}
-	response.OK(c, gin.H{"id": id, "deleted": true})
-}
-
-func (h *Handler) ToggleProduct(c *gin.Context) {
-	userID := c.GetUint("user_id")
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
-	var p model.Product
-	if err := h.DB.Where("id = ? AND user_id = ?", id, userID).First(&p).Error; err != nil {
-		response.Fail(c, http.StatusNotFound, "product not found")
-		return
-	}
-	h.DB.Model(&p).Update("enabled", !p.Enabled)
-	response.OK(c, gin.H{"id": p.ID, "enabled": !p.Enabled})
-}
-
-func (h *Handler) ReorderProducts(c *gin.Context) {
-	userID := c.GetUint("user_id")
-	var req struct {
-		Items []struct {
-			ID        uint `json:"id"`
-			PollOrder int  `json:"poll_order"`
-		} `json:"items"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Fail(c, http.StatusBadRequest, "invalid payload")
-		return
-	}
-	for _, item := range req.Items {
-		h.DB.Model(&model.Product{}).Where("id = ? AND user_id = ?", item.ID, userID).Update("poll_order", item.PollOrder)
-	}
-	response.OK(c, gin.H{"updated": len(req.Items)})
-}
-
-// ════════════════════════════════════════════════════════
-// 负载均衡策略
-// ════════════════════════════════════════════════════════
-
-func (h *Handler) Strategy(c *gin.Context) {
-	userID := c.GetUint("user_id")
-	var user model.User
-	if err := h.DB.First(&user, userID).Error; err != nil {
-		response.Fail(c, http.StatusInternalServerError, "user not found")
-		return
-	}
-	var products []model.Product
-	h.DB.Where("user_id = ?", userID).Order("poll_order asc, id asc").Find(&products)
-
-	response.OK(c, gin.H{
-		"strategy": user.ProductStrategy,
-		"products": products,
-		"strategy_desc": map[string]string{
-			"round_robin": "轮询：选最久未被使用的产品（按 last_used_at），流量均匀分配",
-			"random":      "加权随机：按 weight 权重概率选取，weight 越大命中率越高",
-			"fixed":       "固定：始终选 poll_order 最小的产品，手动禁用后才切换",
-		},
-	})
-}
-
-func (h *Handler) UpdateStrategy(c *gin.Context) {
-	userID := c.GetUint("user_id")
-	var req struct {
-		Strategy string `json:"strategy"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Fail(c, http.StatusBadRequest, "invalid payload")
-		return
-	}
-	if req.Strategy != "round_robin" && req.Strategy != "random" && req.Strategy != "fixed" {
-		response.Fail(c, http.StatusBadRequest, "strategy must be round_robin|random|fixed")
-		return
-	}
-	if err := h.DB.Model(&model.User{}).Where("id = ?", userID).Update("product_strategy", req.Strategy).Error; err != nil {
-		response.Fail(c, http.StatusInternalServerError, "update strategy failed")
-		return
-	}
-	response.OK(c, gin.H{"strategy": req.Strategy})
 }
 
 // ════════════════════════════════════════════════════════
@@ -443,7 +290,13 @@ func buildConfigString(epType, nmeBase string, keys map[string]string) string {
 		data[k] = v
 	}
 	b, _ := json.Marshal(data)
-	return hex.EncodeToString(b) // base64 alternative using hex for simplicity
+	// 一键复制串：NME1.<payload>.<sig>
+	// payload 为 base64url，sig 为 HMAC-SHA256(base64url(payload))
+	payload := base64.RawURLEncoding.EncodeToString(b)
+	mac := hmac.New(sha256.New, []byte("nme-config-v1"))
+	_, _ = mac.Write([]byte(payload))
+	sig := hex.EncodeToString(mac.Sum(nil))
+	return fmt.Sprintf("NME1.%s.%s", payload, sig)
 }
 
 func randHex(n int) string {

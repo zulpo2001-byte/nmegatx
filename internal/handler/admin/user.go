@@ -37,6 +37,9 @@ func (h *Handler) CreateUser(c *gin.Context) {
 		Status      string          `json:"status"`
 		Permissions map[string]bool `json:"permissions"`
 		ExpiresAt   string          `json:"expires_at"`
+		BalanceUSD    *float64      `json:"balance_usd"`
+		PaypalFeeRate *float64      `json:"paypal_fee_rate"`
+		StripeFeeRate *float64      `json:"stripe_fee_rate"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil || req.Email == "" || req.Password == "" {
 		response.Fail(c, http.StatusBadRequest, "email and password required")
@@ -70,6 +73,15 @@ func (h *Handler) CreateUser(c *gin.Context) {
 		Password:    string(hash),
 		Permissions: permsJSON,
 	}
+	if req.BalanceUSD != nil {
+		u.BalanceUSD = *req.BalanceUSD
+	}
+	if req.PaypalFeeRate != nil {
+		u.PaypalFeeRate = *req.PaypalFeeRate
+	}
+	if req.StripeFeeRate != nil {
+		u.StripeFeeRate = *req.StripeFeeRate
+	}
 	if req.ExpiresAt != "" {
 		if t, err := time.Parse(time.RFC3339, req.ExpiresAt); err == nil {
 			u.ExpiresAt = t
@@ -91,6 +103,9 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 		Status    string `json:"status"`
 		Password  string `json:"password"`
 		ExpiresAt string `json:"expires_at"`
+		BalanceUSD    *float64 `json:"balance_usd"`
+		PaypalFeeRate *float64 `json:"paypal_fee_rate"`
+		StripeFeeRate *float64 `json:"stripe_fee_rate"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, http.StatusBadRequest, "invalid payload")
@@ -115,6 +130,15 @@ func (h *Handler) UpdateUser(c *gin.Context) {
 		if t, err := time.Parse(time.RFC3339, req.ExpiresAt); err == nil {
 			updates["expires_at"] = t
 		}
+	}
+	if req.BalanceUSD != nil {
+		updates["balance_usd"] = *req.BalanceUSD
+	}
+	if req.PaypalFeeRate != nil {
+		updates["paypal_fee_rate"] = *req.PaypalFeeRate
+	}
+	if req.StripeFeeRate != nil {
+		updates["stripe_fee_rate"] = *req.StripeFeeRate
 	}
 	if len(updates) == 0 {
 		response.Fail(c, http.StatusBadRequest, "nothing to update")

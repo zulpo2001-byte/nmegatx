@@ -95,6 +95,8 @@ func New(cfg *config.Config, db *gorm.DB, rdb *redis.Client, queue *asynq.Client
 		ag.POST("/users/:id/toggle-status", middleware.AdminPerm("admin.users.manage"), adminH.AdminToggleStatus)
 		ag.PUT("/users/:id/permissions", middleware.AdminPerm("admin.users.manage"), adminH.AdminUpdateUserPermissions)
 		ag.POST("/users/:id/assign-role", middleware.AdminPerm("admin.users.manage"), adminH.AssignRole)
+		ag.POST("/users/:id/recharge", middleware.AdminPerm("admin.users.manage"), adminH.RechargeUserBalance)
+		ag.GET("/users/:id/balance-records", middleware.AdminPerm("admin.users.view"), adminH.UserBalanceRecords)
 
 		// 角色管理（完整 CRUD）
 		ag.GET("/roles", middleware.AdminPerm("admin.roles.view"), adminH.Roles)
@@ -127,7 +129,8 @@ func New(cfg *config.Config, db *gorm.DB, rdb *redis.Client, queue *asynq.Client
 		// 渠道指标
 		ag.GET("/metrics/channels", middleware.AdminPerm("admin.stats.view"), adminH.ChannelMetrics)
 		ag.GET("/metrics/summary", middleware.AdminPerm("admin.stats.view"), adminH.MetricsSummary)
-		ag.DELETE("/metrics/:endpoint_id/reset", middleware.AdminPerm("admin.stats.view"), adminH.MetricsResetEndpoint)
+		ag.DELETE("/metrics/endpoints/:id/reset", middleware.AdminPerm("admin.stats.view"), adminH.MetricsResetEndpoint)
+		ag.DELETE("/metrics/:endpoint_id/reset", middleware.AdminPerm("admin.stats.view"), adminH.MetricsResetEndpoint) // backward-compatible alias
 
 		// 系统设置
 		ag.GET("/settings", middleware.AdminPerm("admin.settings.view"), adminH.GetSettings)
@@ -155,18 +158,6 @@ func New(cfg *config.Config, db *gorm.DB, rdb *redis.Client, queue *asynq.Client
 		ug.GET("/settings", middleware.UserPerm("dashboard_view"), userH.UserReadSettings)
 		// 用户权重快照（只读）
 		ug.GET("/smart-routing/my-weights", middleware.UserPerm("dashboard_view"), userH.UserSmartRoutingWeights)
-
-		// 产品通道
-		ug.GET("/products", middleware.UserPerm("products_manage"), userH.Products)
-		ug.POST("/products", middleware.UserPerm("products_manage"), userH.CreateProduct)
-		ug.PUT("/products/:id", middleware.UserPerm("products_manage"), userH.UpdateProduct)
-		ug.DELETE("/products/:id", middleware.UserPerm("products_manage"), userH.DeleteProduct)
-		ug.POST("/products/:id/toggle", middleware.UserPerm("products_manage"), userH.ToggleProduct)
-		ug.POST("/products/reorder", middleware.UserPerm("products_manage"), userH.ReorderProducts)
-
-		// 轮询策略
-		ug.GET("/strategy", middleware.UserPerm("strategy_manage"), userH.Strategy)
-		ug.PUT("/strategy", middleware.UserPerm("strategy_manage"), userH.UpdateStrategy)
 
 		// PayPal 账号
 		ug.GET("/paypal", middleware.UserPerm("products_manage"), userH.PaypalAccounts)

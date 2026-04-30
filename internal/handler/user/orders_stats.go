@@ -30,6 +30,13 @@ func (h *Handler) UserOrdersStats(c *gin.Context) {
 		WHERE user_id = ?
 		GROUP BY status
 	`, userID).Scan(&rows)
+	var totalOrders, completedOrders int64
+	for _, r := range rows {
+		totalOrders += r.Count
+		if r.Status == "completed" {
+			completedOrders = r.Count
+		}
+	}
 
 	// 今日数据
 	today := time.Now().UTC().Truncate(24 * time.Hour)
@@ -40,10 +47,7 @@ func (h *Handler) UserOrdersStats(c *gin.Context) {
 		Where("user_id = ? AND status = ? AND created_at >= ?", userID, "completed", today).
 		Select("COALESCE(SUM(amount), 0)").Scan(&todayRevenue)
 
-	// 成功率
-	var totalOrders, completedOrders int64
-	h.DB.Model(&model.Order{}).Where("user_id = ?", userID).Count(&totalOrders)
-	h.DB.Model(&model.Order{}).Where("user_id = ? AND status = ?", userID, "completed").Count(&completedOrders)
+	// 成功率（复用 by_status 聚合结果，避免重复查询）
 	successRate := 0.0
 	if totalOrders > 0 {
 		successRate = float64(completedOrders) / float64(totalOrders) * 100

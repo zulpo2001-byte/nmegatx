@@ -191,6 +191,18 @@ func (h *Handler) DeleteAlertChannel(c *gin.Context) {
 	response.OK(c, gin.H{"id": id, "deleted": true})
 }
 
+func (h *Handler) ToggleAlertChannel(c *gin.Context) {
+	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
+	var ch model.AlertChannel
+	if err := h.DB.First(&ch, id).Error; err != nil {
+		response.Fail(c, http.StatusNotFound, "alert channel not found")
+		return
+	}
+	newEnabled := !ch.Enabled
+	h.DB.Model(&ch).Update("enabled", newEnabled)
+	response.OK(c, gin.H{"id": id, "enabled": newEnabled})
+}
+
 func (h *Handler) TestAlertPush(c *gin.Context) {
 	svc := &service.AlertService{DB: h.DB, Log: h.Log}
 	svc.TestPush()
