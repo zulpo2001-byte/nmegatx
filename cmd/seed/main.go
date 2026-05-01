@@ -36,11 +36,16 @@ func main() {
 	apiSecret := getenv("SEED_API_SECRET", "sk_demo_seed_001")
 	userAPIKey := getenv("SEED_USER_API_KEY", "ak_demo_user_001")
 	userAPISecret := getenv("SEED_USER_API_SECRET", "sk_demo_user_001")
+	createUsers := getenv("SEED_CREATE_USERS", "false") == "true"
 
-	admin := ensureAdmin(gdb, adminEmail, adminPassword)
-	merchant := ensureMerchantUser(gdb, userEmail, userPassword)
-	ensureAPIKey(gdb, admin.ID, apiKey, apiSecret)
-	ensureAPIKey(gdb, merchant.ID, userAPIKey, userAPISecret)
+	if createUsers {
+		admin := ensureAdmin(gdb, adminEmail, adminPassword)
+		merchant := ensureMerchantUser(gdb, userEmail, userPassword)
+		ensureAPIKey(gdb, admin.ID, apiKey, apiSecret)
+		ensureAPIKey(gdb, merchant.ID, userAPIKey, userAPISecret)
+	} else {
+		log.Println("seed users skipped (set SEED_CREATE_USERS=true to enable)")
+	}
 	ensureGlobalSettings(gdb)
 	ensureRiskRules(gdb)
 	log.Println("seed completed")
