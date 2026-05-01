@@ -260,8 +260,16 @@ class OSB_Receiver_API
                 $raw       = json_decode(wp_remote_retrieve_body($resp), true);
                 $data      = $raw['data'] ?? $raw;
                 $returnUrl = $data['return_url'] ?? '';
+                if (!$returnUrl) {
+                    $returnUrl = $data['checkout_url'] ?? '';
+                }
                 $aOrderId  = $data['a_order_id'] ?? '';
             }
+        }
+
+        // 支付成功页进入时，主动补发一次 completed（幂等，NME侧会做状态保护）
+        if ($token) {
+            $this->notify_nme_status($token, 'completed');
         }
 
         $bOrder = null;
@@ -300,6 +308,9 @@ class OSB_Receiver_API
                 $raw       = json_decode(wp_remote_retrieve_body($resp), true);
                 $data      = $raw['data'] ?? $raw;
                 $returnUrl = $data['return_url'] ?? home_url('/');
+                if (!$returnUrl) {
+                    $returnUrl = $data['checkout_url'] ?? home_url('/');
+                }
                 $aOrderId  = $data['a_order_id'] ?? '';
             }
         }
