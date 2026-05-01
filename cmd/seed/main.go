@@ -30,21 +30,15 @@ func main() {
 
 	adminEmail := getenv("SEED_ADMIN_EMAIL", "admin@nme.local")
 	adminPassword := getenv("SEED_ADMIN_PASSWORD", "Admin@123456")
-	userEmail := getenv("SEED_USER_EMAIL", "user@nme.local")
-	userPassword := getenv("SEED_USER_PASSWORD", "User@123456")
 	apiKey := getenv("SEED_API_KEY", "ak_demo_seed_001")
 	apiSecret := getenv("SEED_API_SECRET", "sk_demo_seed_001")
-	userAPIKey := getenv("SEED_USER_API_KEY", "ak_demo_user_001")
-	userAPISecret := getenv("SEED_USER_API_SECRET", "sk_demo_user_001")
 	createUsers := getenv("SEED_CREATE_USERS", "false") == "true"
 
 	if createUsers {
 		admin := ensureAdmin(gdb, adminEmail, adminPassword)
-		merchant := ensureMerchantUser(gdb, userEmail, userPassword)
 		ensureAPIKey(gdb, admin.ID, apiKey, apiSecret)
-		ensureAPIKey(gdb, merchant.ID, userAPIKey, userAPISecret)
 	} else {
-		log.Println("seed users skipped (set SEED_CREATE_USERS=true to enable)")
+		log.Println("seed users skipped (set SEED_CREATE_USERS=true to create super admin only)")
 	}
 	ensureGlobalSettings(gdb)
 	ensureRiskRules(gdb)
@@ -136,35 +130,6 @@ func ensureRiskRules(gdb *gorm.DB) {
 			log.Println("seed risk rule:", err)
 		}
 	}
-}
-
-func ensureMerchantUser(gdb *gorm.DB, email, password string) model.User {
-	var user model.User
-	if err := gdb.Where("email = ?", email).First(&user).Error; err == nil {
-		return user
-	} else if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		log.Fatal(err)
-	}
-	hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	user = model.User{
-		Email:    email,
-		Password: string(hash),
-		Role:     "user",
-		Status:   "active",
-		Permissions: `{
-			"dashboard_view":true,
-			"paypal_manage":true,
-			"stripe_manage":true,
-			"strategy_manage":true,
-			"order_view":true,
-			"webhooks":true
-		}`,
-		ExpiresAt: time.Now().AddDate(5, 0, 0),
-	}
-	if err := gdb.Create(&user).Error; err != nil {
-		log.Fatal(err)
-	}
-	return user
 }
 
 func getenv(k, def string) string {
