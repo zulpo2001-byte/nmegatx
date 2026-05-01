@@ -79,19 +79,32 @@ function gca_handle_nme_callback(WP_REST_Request $request): WP_REST_Response
     $orderId = (string)($data['order_id'] ?? '');
     $status  = $data['status'] ?? '';
 
-    if ($status !== 'paid') {
-        return new WP_REST_Response(['status' => 'ignored'], 200);
-    }
-
     $order = wc_get_order((int) $orderId);
     if (!$order) {
         return new WP_REST_Response(['status' => 'error', 'message' => '订单不存在'], 404);
     }
-    if (in_array($order->get_status(), ['processing', 'completed'])) {
-        return new WP_REST_Response(['status' => 'already_done'], 200);
+    switch ($status) {
+        case 'paid':
+            if (!in_array($order->get_status(), ['processing', 'completed'])) {
+                $order->update_status('processing', 'NME支付成功回调，自动改为Processing。');
+            }
+            break;
+        case 'processing':
+            $order->add_order_note('NME状态：processing（支付进行中）');
+            break;
+        case 'abandoned':
+            if (!in_array($order->get_status(), ['processing', 'completed'])) {
+                $order->update_status('cancelled', 'NME回调：用户放弃/超时未支付。');
+            }
+            break;
+        case 'failed':
+            if (!in_array($order->get_status(), ['processing', 'completed'])) {
+                $order->update_status('failed', 'NME回调：支付失败。');
+            }
+            break;
+        default:
+            return new WP_REST_Response(['status' => 'ignored'], 200);
     }
-
-    $order->update_status('processing', 'NME支付成功回调，自动改为Processing。');
     $order->save();
 
     return new WP_REST_Response(['status' => 'ok'], 200);

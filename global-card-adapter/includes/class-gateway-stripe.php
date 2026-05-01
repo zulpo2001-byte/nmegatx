@@ -154,10 +154,11 @@ class Global_Card_Adapter_Gateway extends WC_Payment_Gateway
             'currency'       => $order->get_currency(),
             'payment_method' => 'stripe',
             'email'          => $order->get_billing_email(),
-            'billing'        => $billing,
-            'client_ip'      => $this->get_real_client_ip(),
+            'customer_address' => $billing,
+            'ip'             => $this->get_real_client_ip(),
             'user_agent'     => $_SERVER['HTTP_USER_AGENT'] ?? '',
             'return_url'     => $order->get_checkout_order_received_url(),
+            'checkout_url'   => $order->get_checkout_payment_url(false),
             'channel'        => $this->get_option('channel', 'a'),
             'nonce'          => bin2hex(random_bytes(8)),
         ];
