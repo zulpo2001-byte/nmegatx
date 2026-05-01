@@ -20,18 +20,6 @@ type RiskResult struct {
 	Reasons []string `json:"reasons"`
 }
 
-// AssessRisk 简化入口（兼容旧调用，无 Redis）
-func AssessRisk(amount float64) (int, bool) {
-	r := AssessRiskFull(nil, nil, amount, "", 0)
-	return r.Score, r.Blocked
-}
-
-// AssessRiskWithDB 兼容旧调用
-func AssessRiskWithDB(db *gorm.DB, amount float64, ip string) (int, bool) {
-	r := AssessRiskFull(db, nil, amount, ip, 0)
-	return r.Score, r.Blocked
-}
-
 // AssessRiskFull 完整三层风控评估
 // 第一层：内置实时规则（Redis 计数）
 // 第二层：DB 规则引擎（动态增删）

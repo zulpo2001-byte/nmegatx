@@ -175,10 +175,6 @@ func (a *AlertService) sendWebhook(ch model.AlertChannel, level, title, message 
 	}
 	webhookURL, _ := cfg["url"].(string)
 	if webhookURL == "" {
-		// 兼容旧 target 字段
-		webhookURL = ch.Target
-	}
-	if webhookURL == "" {
 		return
 	}
 
@@ -212,14 +208,6 @@ func (a *AlertService) sendWebhook(ch model.AlertChannel, level, title, message 
 	if resp != nil {
 		defer resp.Body.Close()
 	}
-}
-
-// Warn 兼容旧接口（用 zap.Logger 直接记日志）
-func (a *AlertService) Warn(event string, fields ...zap.Field) {
-	if a.Log == nil {
-		return
-	}
-	a.Log.Warn(event, fields...)
 }
 
 // ── 状态流转辅助 ─────────────────────────────────────────────────────────────

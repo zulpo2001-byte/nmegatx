@@ -50,7 +50,6 @@ type AlertChannel struct {
 	ID        uint      `gorm:"primaryKey"            json:"id"`
 	Name      string    `gorm:"size:100"              json:"name"`
 	Type      string    `gorm:"size:32"               json:"type"`    // telegram|email|webhook
-	Target    string    `gorm:"type:text"             json:"target"`  // 兼容旧字段
 	Config    string    `gorm:"type:jsonb"            json:"config"`  // 渠道配置 JSON
 	Levels    string    `gorm:"type:jsonb"            json:"levels"`  // ["warning","critical"] 或 ["all"]
 	Enabled   bool      `gorm:"default:true"          json:"enabled"`
