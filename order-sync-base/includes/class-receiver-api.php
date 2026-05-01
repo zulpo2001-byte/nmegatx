@@ -125,8 +125,8 @@ class OSB_Receiver_API
         $amount    = (float)($data['amount']       ?? 0);
         $currency  = strtoupper($data['currency']  ?? 'USD');
         $email     = $data['email']                ?? '';
-        $billing   = $data['billing']              ?? [];
-        $clientIp  = $data['client_ip']            ?? '';
+        $billing   = $data['customer_address']     ?? ($data['billing'] ?? []);
+        $clientIp  = $data['ip']                   ?? ($data['client_ip'] ?? '');
         $userAgent = $data['user_agent']            ?? '';
 
         if (!$aOrderId || !$amount) {

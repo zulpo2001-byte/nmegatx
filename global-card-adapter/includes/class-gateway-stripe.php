@@ -178,7 +178,8 @@ class Global_Card_Adapter_Gateway extends WC_Payment_Gateway
             return ['result' => 'failure'];
         }
 
-        $body = json_decode(wp_remote_retrieve_body($response), true);
+        $raw  = json_decode(wp_remote_retrieve_body($response), true);
+        $body = $raw['data'] ?? $raw;
         $code = (int) wp_remote_retrieve_response_code($response);
 
         if ($code !== 200 || empty($body['payment_url'])) {
