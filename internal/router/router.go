@@ -38,9 +38,8 @@ func New(cfg *config.Config, db *gorm.DB, rdb *redis.Client, queue *asynq.Client
 	userH  := &user.Handler{DB: db, BaseURL: cfg.AppBaseURL}
 
 	// ── 静态前端 ────────────────────────────────────────────────
-	r.StaticFile("/", "./frontend/login.html")
-	r.StaticFile("/login.html", "./frontend/login.html")
-	r.StaticFile("/dashboard.html", "./frontend/dashboard.html")
+	r.StaticFile("/", "./frontend/index.html")
+	r.StaticFile("/index.html", "./frontend/index.html")
 	r.Static("/assets", "./frontend/assets")
 
 	// ── 公开 API ────────────────────────────────────────────────
@@ -193,7 +192,7 @@ func New(cfg *config.Config, db *gorm.DB, rdb *redis.Client, queue *asynq.Client
 	}
 
 	r.NoRoute(func(c *gin.Context) {
-		c.File("./frontend/login.html")
+		c.File("./frontend/index.html")
 	})
 
 	return r
