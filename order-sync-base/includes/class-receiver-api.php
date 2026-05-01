@@ -454,7 +454,7 @@ class OSB_Receiver_API
         $signInput = $apiKey . "\n" . $ts . "\n" . hash('sha256', $body);
         $sig       = hash_hmac('sha256', $signInput, $sharedSecret);
 
-        wp_remote_post($nmeUrl . '/api/gateway/callback', [
+        $args = [
             'timeout' => 8,
             'headers' => [
                 'Content-Type' => 'application/json',
@@ -463,6 +463,13 @@ class OSB_Receiver_API
                 'X-Signature'  => $sig,
             ],
             'body' => $body,
-        ]);
+        ];
+
+        // 轻量重试：首发失败或HTTP>=500时再试一次，降低瞬时网络抖动影响
+        $resp = wp_remote_post($nmeUrl . '/api/gateway/callback', $args);
+        $code = is_wp_error($resp) ? 0 : (int)wp_remote_retrieve_response_code($resp);
+        if ($code === 0 || $code >= 500) {
+            wp_remote_post($nmeUrl . '/api/gateway/callback', $args);
+        }
     }
 }
