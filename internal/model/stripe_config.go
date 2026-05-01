@@ -40,6 +40,12 @@ type StripeConfig struct {
 	DailyResetHour int        `gorm:"default:0"                    json:"daily_reset_hour"`
 	LastResetDate  *time.Time `gorm:"type:date"                    json:"last_reset_date"`
 
+	// 调用次数限制（0=不限）
+	MaxCallsTotal  int64 `gorm:"default:0" json:"max_calls_total"`
+	MaxCallsDaily  int64 `gorm:"default:0" json:"max_calls_daily"`
+	CallCountTotal int64 `gorm:"default:0" json:"call_count_total"`
+	CallCountDaily int64 `gorm:"default:0" json:"call_count_daily"`
+
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -61,6 +67,16 @@ func (s *StripeConfig) WouldExceedThreshold(amount float64) bool {
 		return true
 	}
 	if s.MaxAmountTotal > 0 && s.DailyAmount+amount > s.MaxAmountTotal {
+		return true
+	}
+	return false
+}
+
+func (s *StripeConfig) WouldExceedCallLimit() bool {
+	if s.MaxCallsTotal > 0 && s.CallCountTotal >= s.MaxCallsTotal {
+		return true
+	}
+	if s.MaxCallsDaily > 0 && s.CallCountDaily >= s.MaxCallsDaily {
 		return true
 	}
 	return false

@@ -50,9 +50,10 @@ func SelectPaypalAccount(db *gorm.DB, rdb *redis.Client, logger *zap.Logger, sma
 				today := time.Now().UTC().Format("2006-01-02")
 				t, _ := time.Parse("2006-01-02", today)
 				db.Model(acc).Updates(map[string]any{
-					"daily_orders":    0,
-					"daily_amount":    0,
-					"last_reset_date": t,
+					"daily_orders":     0,
+					"daily_amount":     0,
+					"call_count_daily": 0,
+					"last_reset_date":  t,
 				})
 				acc.DailyOrders = 0
 				acc.DailyAmount = 0
@@ -62,7 +63,7 @@ func SelectPaypalAccount(db *gorm.DB, rdb *redis.Client, logger *zap.Logger, sma
 		// 过滤 2：日限额
 		var available []model.PaypalAccount
 		for _, a := range filtered {
-			if !a.WouldExceedThreshold(amount) {
+			if !a.WouldExceedThreshold(amount) && !a.WouldExceedCallLimit() {
 				available = append(available, a)
 			}
 		}
@@ -106,9 +107,10 @@ func SelectPaypalAccount(db *gorm.DB, rdb *redis.Client, logger *zap.Logger, sma
 			today := time.Now().UTC().Format("2006-01-02")
 			t, _ := time.Parse("2006-01-02", today)
 			db.Model(&fresh).Updates(map[string]any{
-				"daily_orders":    0,
-				"daily_amount":    0,
-				"last_reset_date": t,
+				"daily_orders":     0,
+				"daily_amount":     0,
+				"call_count_daily": 0,
+				"last_reset_date":  t,
 			})
 			fresh.DailyOrders = 0
 			fresh.DailyAmount = 0
@@ -119,13 +121,6 @@ func SelectPaypalAccount(db *gorm.DB, rdb *redis.Client, logger *zap.Logger, sma
 			}
 			continue
 		}
-
-		// 原子递增日计数
-		db.Model(&fresh).Updates(map[string]any{
-			"daily_orders": gorm.Expr("daily_orders + 1"),
-			"daily_amount": gorm.Expr("daily_amount + ?", amount),
-			"total_orders": gorm.Expr("total_orders + 1"),
-		})
 
 		// 立即释放锁（计数已完成，不需要继续持有）
 		if rdb != nil {
@@ -182,9 +177,10 @@ func SelectStripeConfig(db *gorm.DB, rdb *redis.Client, logger *zap.Logger, smar
 				today := time.Now().UTC().Format("2006-01-02")
 				t, _ := time.Parse("2006-01-02", today)
 				db.Model(cfg).Updates(map[string]any{
-					"daily_orders":    0,
-					"daily_amount":    0,
-					"last_reset_date": t,
+					"daily_orders":     0,
+					"daily_amount":     0,
+					"call_count_daily": 0,
+					"last_reset_date":  t,
 				})
 				cfg.DailyOrders = 0
 				cfg.DailyAmount = 0
@@ -193,7 +189,7 @@ func SelectStripeConfig(db *gorm.DB, rdb *redis.Client, logger *zap.Logger, smar
 
 		var available []model.StripeConfig
 		for _, s := range filtered {
-			if !s.WouldExceedThreshold(amount) {
+			if !s.WouldExceedThreshold(amount) && !s.WouldExceedCallLimit() {
 				available = append(available, s)
 			}
 		}
@@ -233,9 +229,10 @@ func SelectStripeConfig(db *gorm.DB, rdb *redis.Client, logger *zap.Logger, smar
 			today := time.Now().UTC().Format("2006-01-02")
 			t, _ := time.Parse("2006-01-02", today)
 			db.Model(&fresh).Updates(map[string]any{
-				"daily_orders":    0,
-				"daily_amount":    0,
-				"last_reset_date": t,
+				"daily_orders":     0,
+				"daily_amount":     0,
+				"call_count_daily": 0,
+				"last_reset_date":  t,
 			})
 			fresh.DailyOrders = 0
 			fresh.DailyAmount = 0
@@ -246,12 +243,6 @@ func SelectStripeConfig(db *gorm.DB, rdb *redis.Client, logger *zap.Logger, smar
 			}
 			continue
 		}
-
-		db.Model(&fresh).Updates(map[string]any{
-			"daily_orders": gorm.Expr("daily_orders + 1"),
-			"daily_amount": gorm.Expr("daily_amount + ?", amount),
-			"total_orders": gorm.Expr("total_orders + 1"),
-		})
 
 		if rdb != nil {
 			rdb.Del(ctx, lockKey)

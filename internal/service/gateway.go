@@ -194,9 +194,28 @@ func (s *GatewayService) CreateOrder(user *model.User, p CreateOrderParams) (*mo
 	order.BOrderID = bResult.BOrderID
 	order.PaymentURL = bResult.PaymentURL
 
+	// 仅在 B站建单成功后计入“调用次数/日限额”与总订单统计，避免失败请求误消耗额度。
+	if paypalAccountID != nil {
+		_ = s.DB.Model(&model.PaypalAccount{}).Where("id = ?", *paypalAccountID).Updates(map[string]any{
+			"daily_orders":     gorm.Expr("daily_orders + 1"),
+			"daily_amount":     gorm.Expr("daily_amount + ?", p.Amount),
+			"total_orders":     gorm.Expr("total_orders + 1"),
+			"call_count_total": gorm.Expr("call_count_total + 1"),
+			"call_count_daily": gorm.Expr("call_count_daily + 1"),
+		}).Error
+	} else if stripeConfigID != nil {
+		_ = s.DB.Model(&model.StripeConfig{}).Where("id = ?", *stripeConfigID).Updates(map[string]any{
+			"daily_orders":     gorm.Expr("daily_orders + 1"),
+			"daily_amount":     gorm.Expr("daily_amount + ?", p.Amount),
+			"total_orders":     gorm.Expr("total_orders + 1"),
+			"call_count_total": gorm.Expr("call_count_total + 1"),
+			"call_count_daily": gorm.Expr("call_count_daily + 1"),
+		}).Error
+	}
+
 	if s.Queue != nil {
 		if t, e := task.NewCheckAbandonedTask(order.ID); e == nil {
-			_, _ = s.Queue.Enqueue(t, asynq.ProcessIn(210*time.Second), asynq.MaxRetry(1))
+			_, _ = s.Queue.Enqueue(t, asynq.ProcessIn(180*time.Second), asynq.MaxRetry(1))
 		}
 	}
 

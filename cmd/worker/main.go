@@ -68,7 +68,7 @@ func main() {
 		return nil
 	})
 
-	// ── check:abandoned — 210s 超时标记放弃 ──────────────────────
+		// ── check:abandoned — 180s 超时标记放弃 ──────────────────────
 	mux.HandleFunc(task.TypeCheckAbandoned, func(ctx context.Context, t *asynq.Task) error {
 		var p map[string]uint
 		if err := json.Unmarshal(t.Payload(), &p); err != nil {
@@ -81,7 +81,7 @@ func main() {
 		if order.Status != "pending" {
 			return nil
 		}
-		if time.Since(order.CreatedAt) < 210*time.Second {
+			if time.Since(order.CreatedAt) < 180*time.Second {
 			return nil
 		}
 		now := time.Now()

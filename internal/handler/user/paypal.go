@@ -45,6 +45,8 @@ func (h *Handler) CreatePaypalAccount(c *gin.Context) {
 		MaxAmount          float64 `json:"max_amount"`
 		MaxOrders          int     `json:"max_orders"`
 		MaxAmountTotal     float64 `json:"max_amount_total"`
+		MaxCallsTotal      int64   `json:"max_calls_total"`
+		MaxCallsDaily      int64   `json:"max_calls_daily"`
 		DailyResetHour     int     `json:"daily_reset_hour"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -99,6 +101,8 @@ func (h *Handler) CreatePaypalAccount(c *gin.Context) {
 		MaxAmount:           req.MaxAmount,
 		MaxOrders:           req.MaxOrders,
 		MaxAmountTotal:      req.MaxAmountTotal,
+		MaxCallsTotal:       req.MaxCallsTotal,
+		MaxCallsDaily:       req.MaxCallsDaily,
 		DailyResetHour:      req.DailyResetHour,
 	}
 	if err := h.DB.Create(&item).Error; err != nil {
@@ -155,8 +159,9 @@ func (h *Handler) ResetPaypalDaily(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	id, _ := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err := h.DB.Model(&model.PaypalAccount{}).Where("id = ? AND user_id = ?", id, userID).Updates(map[string]any{
-		"daily_orders": 0,
-		"daily_amount": 0,
+		"daily_orders":     0,
+		"daily_amount":     0,
+		"call_count_daily": 0,
 	}).Error; err != nil {
 		response.Fail(c, http.StatusInternalServerError, "reset failed")
 		return
@@ -182,4 +187,3 @@ func (h *Handler) SetPaypalAccountState(c *gin.Context) {
 	h.DB.Model(&model.PaypalAccount{}).Where("id = ? AND user_id = ?", id, userID).Updates(updates)
 	response.OK(c, gin.H{"id": id, "account_state": req.State})
 }
-

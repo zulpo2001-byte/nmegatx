@@ -54,6 +54,12 @@ type PaypalAccount struct {
 	DailyResetHour int       `gorm:"default:0"    json:"daily_reset_hour"`
 	LastResetDate  *time.Time `gorm:"type:date"   json:"last_reset_date"`
 
+	// 调用次数限制（0=不限）
+	MaxCallsTotal int64 `gorm:"default:0" json:"max_calls_total"`
+	MaxCallsDaily int64 `gorm:"default:0" json:"max_calls_daily"`
+	CallCountTotal int64 `gorm:"default:0" json:"call_count_total"`
+	CallCountDaily int64 `gorm:"default:0" json:"call_count_daily"`
+
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -75,6 +81,16 @@ func (p *PaypalAccount) WouldExceedThreshold(amount float64) bool {
 		return true
 	}
 	if p.MaxAmountTotal > 0 && p.DailyAmount+amount > p.MaxAmountTotal {
+		return true
+	}
+	return false
+}
+
+func (p *PaypalAccount) WouldExceedCallLimit() bool {
+	if p.MaxCallsTotal > 0 && p.CallCountTotal >= p.MaxCallsTotal {
+		return true
+	}
+	if p.MaxCallsDaily > 0 && p.CallCountDaily >= p.MaxCallsDaily {
 		return true
 	}
 	return false
