@@ -10,7 +10,7 @@ import (
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"
-	"nme-v9/internal/model"
+	"nmegateway/internal/model"
 )
 
 // AlertService 多渠道告警服务

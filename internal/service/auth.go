@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
-	"nme-v9/internal/model"
+	"nmegateway/internal/model"
 )
 
 func HashRefreshToken(token string) string {

@@ -12,7 +12,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
-	"nme-v9/internal/model"
+	"nmegateway/internal/model"
 )
 
 // SmartRoutingService 智能路由引擎

@@ -1,4 +1,4 @@
-module nme-v9
+module nmegateway
 
 go 1.24
 

@@ -6,14 +6,14 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
-	"nme-v9/internal/config"
-	"nme-v9/internal/handler/admin"
-	"nme-v9/internal/handler/auth"
-	"nme-v9/internal/handler/gateway"
-	"nme-v9/internal/handler/pay"
-	"nme-v9/internal/handler/user"
-	"nme-v9/internal/middleware"
-	"nme-v9/internal/service"
+	"nmegateway/internal/config"
+	"nmegateway/internal/handler/admin"
+	"nmegateway/internal/handler/auth"
+	"nmegateway/internal/handler/gateway"
+	"nmegateway/internal/handler/pay"
+	"nmegateway/internal/handler/user"
+	"nmegateway/internal/middleware"
+	"nmegateway/internal/service"
 )
 
 func New(cfg *config.Config, db *gorm.DB, rdb *redis.Client, queue *asynq.Client, logger *zap.Logger) *gin.Engine {

@@ -11,10 +11,10 @@ import (
 	"github.com/glebarez/sqlite"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
-	"nme-v9/internal/config"
-	"nme-v9/internal/model"
-	hmacutil "nme-v9/internal/pkg/hmac"
-	"nme-v9/internal/router"
+	"nmegateway/internal/config"
+	"nmegateway/internal/model"
+	hmacutil "nmegateway/internal/pkg/hmac"
+	"nmegateway/internal/router"
 )
 
 func TestSmokeCoreFlows(t *testing.T) {

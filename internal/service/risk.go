@@ -9,7 +9,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
-	"nme-v9/internal/model"
+	"nmegateway/internal/model"
 )
 
 // RiskResult 风控评估结果

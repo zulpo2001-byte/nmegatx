@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"nme-v9/internal/model"
-	"nme-v9/internal/pkg/response"
-	"nme-v9/internal/service"
+	"nmegateway/internal/model"
+	"nmegateway/internal/pkg/response"
+	"nmegateway/internal/service"
 )
 
 // ════════════════════════════════════════════════════════

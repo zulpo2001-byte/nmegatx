@@ -11,10 +11,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
-	"nme-v9/internal/model"
-	jwtutil "nme-v9/internal/pkg/jwt"
-	"nme-v9/internal/pkg/response"
-	"nme-v9/internal/service"
+	"nmegateway/internal/model"
+	jwtutil "nmegateway/internal/pkg/jwt"
+	"nmegateway/internal/pkg/response"
+	"nmegateway/internal/service"
 )
 
 func isExpiredUser(u model.User) bool {

@@ -7,10 +7,10 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"nme-v9/internal/model"
-	hmacutil "nme-v9/internal/pkg/hmac"
-	"nme-v9/internal/pkg/response"
-	"nme-v9/internal/service"
+	"nmegateway/internal/model"
+	hmacutil "nmegateway/internal/pkg/hmac"
+	"nmegateway/internal/pkg/response"
+	"nmegateway/internal/service"
 )
 
 type Handler struct {

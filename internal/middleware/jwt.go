@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	jwtutil "nme-v9/internal/pkg/jwt"
+	jwtutil "nmegateway/internal/pkg/jwt"
 )
 
 func JWT(secret string) gin.HandlerFunc {

@@ -10,8 +10,8 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
-	"nme-v9/internal/model"
-	"nme-v9/internal/pkg/response"
+	"nmegateway/internal/model"
+	"nmegateway/internal/pkg/response"
 )
 
 // Handler 管理后台 handler，持有 DB、Redis、Logger

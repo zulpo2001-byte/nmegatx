@@ -6,8 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	"nme-v9/internal/model"
-	"nme-v9/internal/pkg/response"
+	"nmegateway/internal/model"
+	"nmegateway/internal/pkg/response"
 )
 
 // RechargeUserBalance POST /api/admin/users/:id/recharge

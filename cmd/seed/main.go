@@ -9,9 +9,9 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
-	"nme-v9/internal/config"
-	"nme-v9/internal/model"
-	"nme-v9/internal/pkg/db"
+	"nmegateway/internal/config"
+	"nmegateway/internal/model"
+	"nmegateway/internal/pkg/db"
 )
 
 func main() {

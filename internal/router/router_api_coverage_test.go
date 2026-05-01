@@ -12,9 +12,9 @@ import (
 	"github.com/glebarez/sqlite"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
-	"nme-v9/internal/config"
-	"nme-v9/internal/model"
-	"nme-v9/internal/router"
+	"nmegateway/internal/config"
+	"nmegateway/internal/model"
+	"nmegateway/internal/router"
 )
 
 func TestAllBackendAPIRoutesRespond(t *testing.T) {

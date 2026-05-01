@@ -9,8 +9,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
-	"nme-v9/internal/model"
-	"nme-v9/internal/pkg/response"
+	"nmegateway/internal/model"
+	"nmegateway/internal/pkg/response"
 )
 
 // settingKeys 白名单：所有允许写入的全局设置 key

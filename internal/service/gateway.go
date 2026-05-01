@@ -17,9 +17,9 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
-	"nme-v9/internal/model"
-	hmacutil "nme-v9/internal/pkg/hmac"
-	"nme-v9/internal/task"
+	"nmegateway/internal/model"
+	hmacutil "nmegateway/internal/pkg/hmac"
+	"nmegateway/internal/task"
 )
 
 type GatewayService struct {

@@ -10,7 +10,7 @@ import (
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
-	"nme-v9/internal/model"
+	"nmegateway/internal/model"
 )
 
 func TestGatewayAPIKeyAndABEndpoints(t *testing.T) {

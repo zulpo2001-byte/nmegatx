@@ -6,8 +6,8 @@ import (
 	"os"
 
 	_ "github.com/lib/pq"
-	"nme-v9/internal/config"
-	"nme-v9/internal/pkg/migrate"
+	"nmegateway/internal/config"
+	"nmegateway/internal/pkg/migrate"
 )
 
 func main() {

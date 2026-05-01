@@ -9,11 +9,11 @@ import (
 	"github.com/hibiken/asynq"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
-	"nme-v9/internal/config"
-	"nme-v9/internal/model"
-	"nme-v9/internal/pkg/db"
-	"nme-v9/internal/service"
-	"nme-v9/internal/task"
+	"nmegateway/internal/config"
+	"nmegateway/internal/model"
+	"nmegateway/internal/pkg/db"
+	"nmegateway/internal/service"
+	"nmegateway/internal/task"
 )
 
 func main() {
