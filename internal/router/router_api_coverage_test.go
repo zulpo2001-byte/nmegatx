@@ -57,7 +57,6 @@ func TestAllBackendAPIRoutesRespond(t *testing.T) {
 			continue
 		}
 		path := strings.ReplaceAll(strings.ReplaceAll(rt.Path, ":id", "1"), ":token", "tok_1")
-		path = strings.ReplaceAll(path, ":endpoint_id", "1")
 		body := map[string]any{}
 		bodyBytes, _ := json.Marshal(body)
 		req := httptest.NewRequest(rt.Method, path, bytes.NewReader(bodyBytes))
@@ -72,7 +71,7 @@ func TestAllBackendAPIRoutesRespond(t *testing.T) {
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 
-		allowNotFound := strings.Contains(rt.Path, ":id") || strings.Contains(rt.Path, ":token") || strings.Contains(rt.Path, ":endpoint_id")
+		allowNotFound := strings.Contains(rt.Path, ":id") || strings.Contains(rt.Path, ":token")
 		if (w.Code == http.StatusNotFound && !allowNotFound) || w.Code == http.StatusMethodNotAllowed || w.Code >= 500 {
 			// metrics summary/reset依赖 redis，允许 503
 			if strings.Contains(rt.Path, "/api/admin/metrics/") && w.Code == http.StatusServiceUnavailable {

@@ -146,9 +146,6 @@ func (h *Handler) MetricsResetEndpoint(c *gin.Context) {
 		return
 	}
 	epID := c.Param("id")
-	if epID == "" {
-		epID = c.Param("endpoint_id") // 兼容旧路由
-	}
 	ctx := context.Background()
 	bKey := "nme:metrics:bstation:" + epID
 	wKey := "nme:metrics:webhook:" + epID
