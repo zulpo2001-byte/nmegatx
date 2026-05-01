@@ -1,0 +1,5 @@
+-- Baseline schema snapshot for fresh environments (documentation purpose).
+-- Apply historical migrations in production; this file is reference-only.
+-- Includes current core tables: users, orders, webhook_endpoints,
+-- paypal_accounts, stripe_configs, balance_ledgers, roles, risk_rules,
+-- alert_channels, alert_records, channel_metrics, refresh_tokens, global_settings, audit_logs.

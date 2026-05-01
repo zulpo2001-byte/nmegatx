@@ -1,4 +1,4 @@
-# NME SaaS v9.0 (Go)
+# NME SaaS v9.1 (Go)
 
 Go 重构版支付中控，包含 Gin + GORM + PostgreSQL + Redis + Asynq。
 
@@ -10,14 +10,17 @@ Go 重构版支付中控，包含 Gin + GORM + PostgreSQL + Redis + Asynq。
 ## 快速部署
 
 ```bash
-# 1. 解压项目到服务器
-tar -xzf nme_v9.tar.gz
-cd nme_v9_modified
+# 1) 服务器拉取项目
+git clone https://github.com/zulpo2001-byte/nmegatx.git
+cd nmegatx
 
-# 2. 添加执行权限
+# 2) 切换到发布分支（示例）
+git checkout release/full-pack-20260430
+
+# 3) 添加执行权限
 chmod +x deploy.sh
 
-# 3. 运行一键部署脚本
+# 4) 运行一键部署脚本（交互式）
 ./deploy.sh
 ```
 
@@ -29,6 +32,32 @@ chmod +x deploy.sh
 - 等待数据库就绪
 - 执行数据库迁移
 - 写入初始数据
+
+## 从 GitHub 一键拉取并部署（推荐）
+
+已提供脚本：`one_click_pull_deploy.sh`
+
+```bash
+# 首次
+chmod +x one_click_pull_deploy.sh
+
+# 使用默认分支（release/full-pack-20260430）一键拉取并部署
+./one_click_pull_deploy.sh
+
+# 或者指定分支
+./one_click_pull_deploy.sh main
+```
+
+脚本执行步骤：
+
+1. `git fetch origin`
+2. `git checkout <branch>`
+3. `git pull --ff-only origin <branch>`
+4. `docker compose -f docker-compose.prod.yml up -d --build`
+5. `docker compose -f docker-compose.prod.yml exec -T app ./migrate`
+6. `docker compose -f docker-compose.prod.yml exec -T app ./seed`
+
+> 若服务器是首次部署，请先安装 Docker / Docker Compose，并确保当前用户有 Docker 执行权限。
 
 ## 默认账号
 

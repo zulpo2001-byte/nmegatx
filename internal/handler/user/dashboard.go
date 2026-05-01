@@ -29,21 +29,15 @@ func (h *Handler) Dashboard(c *gin.Context) {
 	h.DB.Model(&model.PaypalAccount{}).Where("user_id = ? AND enabled = true AND account_state = 'active'", userID).Count(&paypalCount)
 	h.DB.Model(&model.StripeConfig{}).Where("user_id = ? AND enabled = true AND account_state = 'active'", userID).Count(&stripeCount)
 
-	// B站产品数
-	var productCount int64
-	h.DB.Model(&model.Product{}).Where("user_id = ? AND enabled = true", userID).Count(&productCount)
-
 	response.OK(c, gin.H{
 		"orders_total":     total,
 		"pending":          pending,
 		"completed":        completed,
 		"expired":          expired,
 		"success_rate":     successRate,
-		"product_strategy": user.ProductStrategy,
 		"expires_at":       user.ExpiresAt,
 		"paypal_count":     paypalCount,
 		"stripe_count":     stripeCount,
-		"product_count":    productCount,
 		"user_id":          user.ID,
 	})
 }

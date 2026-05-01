@@ -1,0 +1,3 @@
+ALTER TABLE IF EXISTS paypal_accounts
+  ADD COLUMN IF NOT EXISTS paypal_me_username VARCHAR(128) NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS sandbox_paypal_me_username VARCHAR(128) NOT NULL DEFAULT '';

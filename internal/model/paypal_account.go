@@ -13,6 +13,7 @@ type PaypalAccount struct {
 	Label              string    `gorm:"size:100"                                              json:"label"`
 	Mode               string    `gorm:"size:10;default:email"                                 json:"mode"`           // email | rest
 	Email              string    `gorm:"size:255"                                              json:"email"`
+	PaypalMeUsername   string    `gorm:"size:128"                                              json:"paypalme_username"`
 	ClientID           string    `gorm:"type:text"                                             json:"-"`
 	ClientSecret       string    `gorm:"type:text"                                             json:"-"`
 
@@ -20,6 +21,7 @@ type PaypalAccount struct {
 	Sandbox             bool   `gorm:"default:false"                                         json:"sandbox"`
 	SandboxMode         bool   `gorm:"default:false"                                         json:"sandbox_mode"`
 	SandboxEmail        string `gorm:"size:255"                                              json:"sandbox_email"`
+	SandboxPaypalMeUsername string `gorm:"size:128"                                          json:"sandbox_paypalme_username"`
 	SandboxClientID     string `gorm:"type:text"                                             json:"-"`
 	SandboxClientSecret string `gorm:"type:text"                                             json:"-"`
 
@@ -103,4 +105,11 @@ func (p *PaypalAccount) ActiveEmail() string {
 		return p.SandboxEmail
 	}
 	return p.Email
+}
+
+func (p *PaypalAccount) ActivePaypalMeUsername() string {
+	if p.SandboxMode && p.SandboxPaypalMeUsername != "" {
+		return p.SandboxPaypalMeUsername
+	}
+	return p.PaypalMeUsername
 }

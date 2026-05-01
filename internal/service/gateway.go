@@ -31,20 +31,23 @@ type GatewayService struct {
 	SmartSvc *SmartRoutingService // 智能路由服务，用于 RecordRequest 和动态权重
 }
 
-// ResolveUserByAPIKey — A站下单用，查 api_keys 表
+// ResolveUserByAPIKey — A站下单用，查 webhook_endpoints 表 type=a
 func (s *GatewayService) ResolveUserByAPIKey(apiKey string) (uint, string, *model.User, error) {
-	var key model.APIKey
-	if err := s.DB.Where("api_key = ? AND enabled = true", apiKey).First(&key).Error; err != nil {
-		return 0, "", nil, errors.New("invalid api key")
+	var ep model.WebhookEndpoint
+	if err := s.DB.Where("a_api_key = ? AND type = 'a' AND enabled = true", apiKey).First(&ep).Error; err != nil {
+		return 0, "", nil, errors.New("invalid a_api_key")
 	}
 	var user model.User
-	if err := s.DB.First(&user, key.UserID).Error; err != nil {
+	if err := s.DB.First(&user, ep.UserID).Error; err != nil {
 		return 0, "", nil, errors.New("user not found")
 	}
 	if user.Status != "active" {
 		return 0, "", nil, errors.New("user inactive")
 	}
-	return user.ID, key.Secret, &user, nil
+	if !user.ExpiresAt.IsZero() && user.ExpiresAt.Before(time.Now().UTC()) {
+		return 0, "", nil, errors.New("user expired")
+	}
+	return user.ID, ep.SharedSecret, &user, nil
 }
 
 // ResolveByBApiKey — B站回调/调pay-link用，查 webhook_endpoints 表 type=b
@@ -76,12 +79,6 @@ func (s *GatewayService) CreateOrder(user *model.User, p CreateOrderParams) (*mo
 	var exists model.Order
 	if err := s.DB.Where("user_id = ? AND a_order_id = ? AND status != 'failed'", user.ID, p.AOrderID).First(&exists).Error; err == nil {
 		return &exists, nil
-	}
-
-	// 选 B站产品（只从该用户的产品池）
-	product, err := SelectProduct(s.DB, user)
-	if err != nil {
-		return nil, fmt.Errorf("no available B-station product: %w", err)
 	}
 
 	currency := p.Currency
@@ -147,7 +144,6 @@ func (s *GatewayService) CreateOrder(user *model.User, p CreateOrderParams) (*mo
 
 	order := &model.Order{
 		UserID:          user.ID,
-		ProductID:       &product.ID,
 		AOrderID:        p.AOrderID,
 		Amount:          p.Amount,
 		Status:          "pending",
@@ -170,7 +166,7 @@ func (s *GatewayService) CreateOrder(user *model.User, p CreateOrderParams) (*mo
 		return nil, err
 	}
 
-	bResult, err := s.CallBStation(user, order, product)
+	bResult, err := s.CallBStation(user, order)
 	if err != nil || !bResult.Success {
 		errMsg := "B-station call failed"
 		if err != nil {
@@ -198,8 +194,6 @@ func (s *GatewayService) CreateOrder(user *model.User, p CreateOrderParams) (*mo
 	order.BOrderID = bResult.BOrderID
 	order.PaymentURL = bResult.PaymentURL
 
-	RecordUsage(s.DB, product.ID)
-
 	if s.Queue != nil {
 		if t, e := task.NewCheckAbandonedTask(order.ID); e == nil {
 			_, _ = s.Queue.Enqueue(t, asynq.ProcessIn(210*time.Second), asynq.MaxRetry(1))
@@ -208,7 +202,6 @@ func (s *GatewayService) CreateOrder(user *model.User, p CreateOrderParams) (*mo
 
 	s.log().Info("Gateway order created",
 		zap.String("a_order_id", p.AOrderID),
-		zap.String("product", product.BProductID),
 		zap.String("payment_method", paymentMethod),
 		zap.String("gateway_label", gatewayLabel),
 		zap.Any("validity_days", validityDays),
@@ -225,7 +218,7 @@ type BStationResult struct {
 	Error      string
 }
 
-func (s *GatewayService) CallBStation(user *model.User, order *model.Order, product *model.Product) (*BStationResult, error) {
+func (s *GatewayService) CallBStation(user *model.User, order *model.Order) (*BStationResult, error) {
 	var endpoint model.WebhookEndpoint
 	err := s.DB.Where("user_id = ? AND type = 'b' AND enabled = true", user.ID).
 		Order("id desc").First(&endpoint).Error
@@ -240,7 +233,6 @@ func (s *GatewayService) CallBStation(user *model.User, order *model.Order, prod
 	bURL := baseURL + "/wp-json/b-station/v1/order"
 
 	payload := map[string]any{
-		"product_id":     product.BProductID,
 		"a_order_id":     order.AOrderID,
 		"pay_token":      order.PayToken,
 		"email":          order.Email,
@@ -322,16 +314,16 @@ func (s *GatewayService) GeneratePayLink(bApiKey string, payToken string, amount
 		if err != nil {
 			return "", fmt.Errorf("no available paypal account: %w", err)
 		}
-		// email 模式：直接构造 PayPal.me 链接
 		if acc.Mode == "email" {
-			activeEmail := acc.ActiveEmail()
-			if activeEmail == "" {
-				return "", errors.New("paypal account email is empty")
+			username := strings.TrimSpace(acc.ActivePaypalMeUsername())
+			if username == "" {
+				activeEmail := acc.ActiveEmail()
+				if activeEmail == "" {
+					return "", errors.New("paypal account email is empty")
+				}
+				username = strings.Split(activeEmail, "@")[0]
 			}
-			// PayPal.me 链接格式：https://paypal.me/EMAIL/AMOUNT
-			paypalURL := fmt.Sprintf("https://paypal.me/%s/%.2f%s",
-				strings.TrimPrefix(strings.Split(activeEmail, "@")[0], ""),
-				amount, strings.ToUpper(currency))
+			paypalURL := fmt.Sprintf("https://paypal.me/%s/%.2f%s", username, amount, strings.ToUpper(currency))
 			return paypalURL, nil
 		}
 		// rest 模式：走 OAuth2 API
@@ -482,6 +474,27 @@ func (s *GatewayService) CompleteByPayToken(token string, reportAmount float64, 
 	}
 	now := time.Now()
 	updates := map[string]any{"status": "completed", "paid_at": &now}
+
+	// 通道收费：按用户配置的通道费率在完成时扣费（USD）
+	var user model.User
+	feeRate := 0.0
+	feeAmount := 0.0
+	if err := s.DB.Select("id", "paypal_fee_rate", "stripe_fee_rate", "balance_usd").First(&user, order.UserID).Error; err == nil {
+		if order.PaymentMethod == "paypal" {
+			feeRate = user.PaypalFeeRate
+		} else if order.PaymentMethod == "stripe" {
+			feeRate = user.StripeFeeRate
+		}
+		if feeRate < 0 {
+			feeRate = 0
+		}
+		feeAmount = order.Amount * feeRate / 100.0
+		if feeAmount < 0 {
+			feeAmount = 0
+		}
+		updates["channel_fee_rate"] = feeRate
+		updates["channel_fee"] = feeAmount
+	}
 	if bOrderID != "" {
 		updates["b_order_id"] = bOrderID
 	}
@@ -491,8 +504,33 @@ func (s *GatewayService) CompleteByPayToken(token string, reportAmount float64, 
 	if err := s.DB.Model(&order).Updates(updates).Error; err != nil {
 		return nil, err
 	}
+	if feeAmount > 0 {
+		var updated model.User
+		if err := s.DB.Transaction(func(tx *gorm.DB) error {
+			if err := tx.Model(&model.User{}).Where("id = ?", order.UserID).
+				Update("balance_usd", gorm.Expr("COALESCE(balance_usd,0) - ?", feeAmount)).Error; err != nil {
+				return err
+			}
+			if err := tx.Select("id", "balance_usd").First(&updated, order.UserID).Error; err != nil {
+				return err
+			}
+			entry := model.BalanceLedger{
+				UserID:     order.UserID,
+				OrderID:    &order.ID,
+				Type:       "channel_fee",
+				AmountUSD:  -feeAmount,
+				BalanceUSD: updated.BalanceUSD,
+				Note:       "order completed fee deduction",
+			}
+			return tx.Create(&entry).Error
+		}); err != nil {
+			s.log().Warn("记录通道扣费失败", zap.Error(err), zap.Uint("order_id", order.ID))
+		}
+	}
 	order.Status = "completed"
 	order.PaidAt = &now
+	order.ChannelFeeRate = feeRate
+	order.ChannelFee = feeAmount
 
 	if s.Queue != nil {
 		if t, e := task.NewCallbackTask(order.ID, "completed"); e == nil {
