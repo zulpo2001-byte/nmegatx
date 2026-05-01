@@ -1,2 +1,0 @@
-ALTER TABLE orders DROP COLUMN IF EXISTS validity_days;
-ALTER TABLE orders DROP COLUMN IF EXISTS expires_at;

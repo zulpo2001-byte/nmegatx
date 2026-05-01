@@ -1,7 +1,0 @@
-CREATE TABLE IF NOT EXISTS global_settings (
-    id BIGSERIAL PRIMARY KEY,
-    key VARCHAR(128) NOT NULL UNIQUE,
-    value JSONB NOT NULL DEFAULT '{}'::jsonb,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);

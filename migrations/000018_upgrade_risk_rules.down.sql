@@ -1,6 +1,0 @@
-ALTER TABLE risk_rules DROP COLUMN IF EXISTS type;
-ALTER TABLE risk_rules DROP COLUMN IF EXISTS conditions;
-ALTER TABLE risk_rules DROP COLUMN IF EXISTS action;
-ALTER TABLE risk_rules DROP COLUMN IF EXISTS risk_score;
-ALTER TABLE risk_rules DROP COLUMN IF EXISTS hit_count;
-ALTER TABLE risk_rules DROP COLUMN IF EXISTS description;
