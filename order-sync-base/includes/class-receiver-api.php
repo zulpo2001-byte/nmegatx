@@ -255,9 +255,10 @@ class OSB_Receiver_API
         $aOrderId  = '';
 
         if ($nmeUrl) {
-            $resp = wp_remote_get($nmeUrl . '/api/gateway/token/' . urlencode($token), ['timeout' => 10]);
+            $resp = wp_remote_get($nmeUrl . '/api/gateway/status/' . urlencode($token), ['timeout' => 10]);
             if (!is_wp_error($resp) && wp_remote_retrieve_response_code($resp) === 200) {
-                $data      = json_decode(wp_remote_retrieve_body($resp), true);
+                $raw       = json_decode(wp_remote_retrieve_body($resp), true);
+                $data      = $raw['data'] ?? $raw;
                 $returnUrl = $data['return_url'] ?? '';
                 $aOrderId  = $data['a_order_id'] ?? '';
             }
@@ -291,9 +292,13 @@ class OSB_Receiver_API
         $aOrderId  = '';
 
         if ($token && $nmeUrl) {
-            $resp = wp_remote_get($nmeUrl . '/api/gateway/token/' . urlencode($token), ['timeout' => 10]);
+            // 主动告知 NME：用户在 B站手动返回/取消支付
+            $this->notify_nme_status($token, 'abandoned');
+
+            $resp = wp_remote_get($nmeUrl . '/api/gateway/status/' . urlencode($token), ['timeout' => 10]);
             if (!is_wp_error($resp) && wp_remote_retrieve_response_code($resp) === 200) {
-                $data      = json_decode(wp_remote_retrieve_body($resp), true);
+                $raw       = json_decode(wp_remote_retrieve_body($resp), true);
+                $data      = $raw['data'] ?? $raw;
                 $returnUrl = $data['return_url'] ?? home_url('/');
                 $aOrderId  = $data['a_order_id'] ?? '';
             }
@@ -419,5 +424,34 @@ class OSB_Receiver_API
 </script>
 </body></html>
         <?php
+    }
+
+    // 主动通知 NME 订单状态（用于手动返回/取消）
+    private function notify_nme_status(string $payToken, string $status): void
+    {
+        $settings     = $this->get_settings();
+        $nmeUrl       = rtrim($settings['nme_url'] ?? '', '/');
+        $apiKey       = $settings['b_api_key'] ?? '';
+        $sharedSecret = $settings['b_shared_secret'] ?? '';
+        if (!$nmeUrl || !$apiKey || !$sharedSecret || !$payToken) {
+            return;
+        }
+
+        $payload   = ['pay_token' => $payToken, 'status' => $status];
+        $body      = wp_json_encode($payload);
+        $ts        = time();
+        $signInput = $apiKey . "\n" . $ts . "\n" . hash('sha256', $body);
+        $sig       = hash_hmac('sha256', $signInput, $sharedSecret);
+
+        wp_remote_post($nmeUrl . '/api/gateway/callback', [
+            'timeout' => 8,
+            'headers' => [
+                'Content-Type' => 'application/json',
+                'X-Api-Key'    => $apiKey,
+                'X-Timestamp'  => (string)$ts,
+                'X-Signature'  => $sig,
+            ],
+            'body' => $body,
+        ]);
     }
 }
